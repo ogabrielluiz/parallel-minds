@@ -1,0 +1,20 @@
+{
+  "name": "creative-consensus",
+  "description": "Dispatches 10-20 parallel agents with domain-adapted creative angles, then synthesizes the best ideas with structured evaluation and stress-testing",
+  "version": "1.0.0",
+  "author": {
+    "name": "ogabrielluiz",
+    "url": "https://github.com/ogabrielluiz"
+  },
+  "homepage": "https://github.com/ogabrielluiz/creative-consensus",
+  "repository": "https://github.com/ogabrielluiz/creative-consensus",
+  "license": "MIT",
+  "keywords": [
+    "creative",
+    "consensus",
+    "brainstorming",
+    "parallel-agents",
+    "design-decisions",
+    "architecture"
+  ]
+}

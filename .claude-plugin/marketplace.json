@@ -1,0 +1,20 @@
+{
+  "name": "creative-consensus",
+  "description": "Parallel agent creative consensus for design decisions",
+  "owner": {
+    "name": "ogabrielluiz",
+    "url": "https://github.com/ogabrielluiz"
+  },
+  "plugins": [
+    {
+      "name": "creative-consensus",
+      "description": "Dispatches 10-20 parallel agents with domain-adapted creative angles, then synthesizes the best ideas with structured evaluation and stress-testing",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "ogabrielluiz",
+        "url": "https://github.com/ogabrielluiz"
+      }
+    }
+  ]
+}
