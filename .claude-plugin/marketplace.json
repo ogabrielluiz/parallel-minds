@@ -1,14 +1,14 @@
 {
-  "name": "creative-consensus",
-  "description": "Parallel agent creative consensus for design decisions",
+  "name": "parallel-minds",
+  "description": "Claude Code skills that leverage parallel agent swarms for creative exploration",
   "owner": {
     "name": "ogabrielluiz",
     "url": "https://github.com/ogabrielluiz"
   },
   "plugins": [
     {
-      "name": "creative-consensus",
-      "description": "Dispatches 10-20 parallel agents with domain-adapted creative angles, then synthesizes the best ideas with structured evaluation and stress-testing",
+      "name": "parallel-minds",
+      "description": "A collection of Claude Code skills that leverage parallel agent swarms for creative exploration, ideation, and problem-solving",
       "version": "1.0.0",
       "source": "./",
       "author": {

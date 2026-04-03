@@ -1,21 +1,23 @@
-# creative-consensus
+# parallel-minds
 
-A Claude Code plugin that dispatches 10-20 parallel agents with domain-adapted creative angles, then synthesizes the best ideas with structured evaluation and stress-testing.
-
-Turns "pick the first idea" into "pick from the best of 10-20 competing ideas, stress-tested and ranked."
+A Claude Code plugin with skills that leverage parallel agent swarms for creative exploration, ideation, and problem-solving.
 
 ## Install
 
 ```bash
-claude plugin marketplace add https://github.com/ogabrielluiz/creative-consensus
-claude plugin install creative-consensus
+claude plugin marketplace add https://github.com/ogabrielluiz/parallel-minds
+claude plugin install parallel-minds
 ```
 
-## Usage
+## Skills
 
-Invoke with `/creative-consensus:creative-consensus` or just describe a creative/design challenge — the skill triggers automatically when multiple valid approaches exist.
+### creative-consensus
 
-### Recipes
+Dispatches 10-20 parallel agents with domain-adapted creative angles to explore a design space, then presents structured proposals for you to choose from.
+
+Invoke with `/parallel-minds:creative-consensus` or describe a creative challenge — the skill triggers automatically.
+
+#### Recipes
 
 | Recipe | Agents | When to Use |
 |--------|--------|-------------|
@@ -25,17 +27,17 @@ Invoke with `/creative-consensus:creative-consensus` or just describe a creative
 | `research` | 15 | When existing codebase context matters |
 | `adversarial` | 10 | When stress-testing matters more than breadth |
 
-### Domain Detection
+#### Domain Detection
 
-The skill automatically detects the problem domain (systems architecture, API design, data modeling, security, DevOps, UX) and selects appropriate creative angles. Three mandatory roles are always included:
+Automatically detects the problem domain (systems architecture, API design, data modeling, security, DevOps, UX) and selects appropriate creative angles. Three mandatory roles always included:
 
 - **Regret Agent** — "What will we regret in 1 year?"
 - **Wildcard** — Cross-domain angle nobody would think of
 - **Saboteur** — Attacks the other proposals
 
-### Output
+#### Output
 
-Results are presented as a comparison table in three tiers:
+Comparison table in three tiers:
 
 - **Conservative** — proven, low risk
 - **Moderate** — novel but grounded

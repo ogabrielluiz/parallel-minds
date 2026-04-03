@@ -1,21 +1,21 @@
 ---
 name: creative-consensus
-description: Use when facing a creative or design decision with multiple valid approaches -- dispatches 10-20 parallel agents with dynamic, domain-adapted angles, then synthesizes the best ideas with structured evaluation and stress-testing
+description: Use when you want to generate and explore a wide range of ideas for a creative or design challenge -- dispatches 10-20 parallel agents with dynamic, domain-adapted angles to produce diverse proposals, then presents them with structured evaluation for the user to choose from
 ---
 
 # Creative Consensus v2
 
 ## Overview
 
-Dispatch 10-20 agents with the same creative challenge but different angles adapted to the problem domain. Collect structured output, cluster by approach, stress-test with saboteur agents, and present a comparison table with multiple tiers (conservative/moderate/ambitious). Turns "pick the first idea" into "pick from the best of 10-20 competing ideas, stress-tested and ranked."
+Generate a wide range of ideas for a creative or design challenge by dispatching 10-20 parallel agents, each exploring the problem from a different angle adapted to the domain. Collect structured proposals, cluster by approach, stress-test with saboteur agents, and present them in a comparison table with multiple tiers (conservative/moderate/ambitious). The user picks, combines, or redirects -- the skill explores, it does not decide.
 
 ## When to Use
 
+- You want to explore a wide range of ideas before committing to an approach
 - Designing something where taste matters (sound design, UI, architecture)
-- Multiple valid approaches exist and you're not sure which is best
-- The user says "make it interesting/creative/inspiring"
-- You need to explore a design space quickly
-- Architecture decisions, API design, feature planning, refactoring strategy
+- The problem space is large and you want diverse proposals to choose from
+- The user says "make it interesting/creative/inspiring" or "brainstorm this"
+- You need to map out possibilities quickly -- feature ideas, architecture options, design directions
 
 ## Process
 
