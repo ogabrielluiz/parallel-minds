@@ -31,7 +31,7 @@ Invoke with `/parallel-minds:creative-consensus` or describe a creative challeng
 
 Automatically detects the problem domain (systems architecture, API design, data modeling, security, DevOps, UX) and selects appropriate creative angles. Three mandatory roles always included:
 
-- **Regret Agent** — "What will we regret in 1 year?"
+- **Regret Agent** — "What will we regret about this approach?"
 - **Wildcard** — Cross-domain angle nobody would think of
 - **Saboteur** — Attacks the other proposals
 
@@ -43,7 +43,7 @@ Comparison table in three tiers:
 - **Moderate** — novel but grounded
 - **Ambitious** — high risk, high reward
 
-Each idea includes: name, pitch, mechanism, effort, risk, reversibility, failure mode, and time horizon.
+Each idea includes: name, pitch, mechanism, effort, risk, reversibility, and failure mode.
 
 ## Local Development
 

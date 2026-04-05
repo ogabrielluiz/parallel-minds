@@ -35,7 +35,7 @@ If the user specified a recipe or agent count, use that instead.
 
 Based on the detected domain, select angles from the domain-specific libraries below. Always include these three mandatory roles regardless of domain:
 
-- **Regret Agent**: "What will we regret in 1 year if we pick this approach?"
+- **Regret Agent**: "What will we regret about this approach?"
 - **Wildcard**: A cross-domain or random-perturbation angle that nobody would think of
 - **Saboteur**: "How would you design this to fail spectacularly? Now attack the other proposals."
 
@@ -60,7 +60,6 @@ For each idea you propose, include:
 - Risk: low / medium / high
 - Reversibility: easy / hard / permanent
 - Failure mode (how this could go wrong)
-- Time horizon this optimizes for: 2h / 1w / 1m / 1y
 ```
 
 ### Step 5: Synthesize (Two-Phase)
@@ -75,7 +74,6 @@ For each idea you propose, include:
 - Comparison table with structured fields (name, pitch, effort, risk, reversibility, failure mode)
 - Three tiers: **conservative** (proven, low risk), **moderate** (novel but grounded), **ambitious** (high risk, high reward)
 - Known failure modes section (from saboteur + all agents' failure_mode fields)
-- Horizon labels: "This recommendation optimizes for [timeframe]. The [other timeframe] answer differs in [way]."
 
 Let the user override your picks. They may combine ideas or request deeper exploration on a direction.
 
@@ -115,19 +113,18 @@ Select angles based on detected domain. Fill all slots beyond the 3 mandatory ro
 
 **UX/Product**: first-use experience, power-user path, accessibility-first, error recovery journey, emotional arc, what makes users tell a friend
 
-**General (fallback)**: minimalist, maximalist, constraint-flip, metaphor-driven, temporal/rhythmic, textural, reference-based, emotional, user-experience, time-horizon
+**General (fallback)**: minimalist, maximalist, constraint-flip, metaphor-driven, temporal/rhythmic, textural, reference-based, emotional, user-experience
 
 ## Key Rules
 
 - **Minimum 10 agents** -- below that you lose diversity. Scale up for complex problems, never down.
 - Use `model: sonnet` for agents by default. Use `model: haiku` for large divergent swarms (R1 of `thorough`). Reserve opus for synthesis only.
 - Each agent is research-only -- no file writes (except `research` recipe explorers which may read files).
-- Request structured output from agents (name, pitch, mechanism, effort, risk, reversibility, failure mode, horizon).
+- Request structured output from agents (name, pitch, mechanism, effort, risk, reversibility, failure mode).
 - The synthesis is YOUR job, not the agents'. Use two-phase extraction + clustering.
 - Always present the comparison table -- let the user override your picks.
 - Always include the three mandatory roles: regret, wildcard, saboteur.
 - Present three tiers (conservative/moderate/ambitious), not a single blended recommendation.
-- Include horizon labels on recommendations.
 
 ## Anti-Patterns
 
@@ -136,6 +133,5 @@ Select angles based on detected domain. Fill all slots beyond the 3 mandatory ro
 - Don't skip the saboteur -- unattacked ideas are the most dangerous
 - Don't blend into mush -- present distinct tiers, not one averaged recommendation
 - Don't let articulation quality drive selection -- extract mechanisms first
-- Don't forget the horizon label -- "this optimizes for 1 week; the 1-year answer differs"
 - Don't copy one proposal wholesale -- synthesize across clusters
 - Don't ask agents to implement -- just ideate
