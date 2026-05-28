@@ -4,6 +4,16 @@ A Claude Code plugin with skills that leverage parallel agent swarms for creativ
 
 ## Install
 
+### Via skills CLI
+
+```bash
+npx skills@latest add ogabrielluiz/parallel-minds
+```
+
+Pick the skills you want when prompted. Skills are installed globally and work with any coding agent that supports SKILL.md.
+
+### Via Claude Code plugin marketplace
+
 ```bash
 claude plugin marketplace add https://github.com/ogabrielluiz/parallel-minds
 claude plugin install parallel-minds
