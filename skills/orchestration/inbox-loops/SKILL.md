@@ -7,6 +7,8 @@ description: Bootstrap and run the inbox-loops system — pick loops, configure 
 
 Sets up the inbox-loops system: gathers config interactively, materializes a self-contained inbox directory, and spawns one cron-armed background session per selected loop (PR, Jira, Vuln, Dispatcher). Each session arms its own durable cron and runs a first cycle immediately.
 
+> **Experimental.** This skill depends on undocumented Claude Code behavior: the `claude --bg` background-session mechanism and `CronCreate` scheduling. Crons are currently session-only (see step 6), so loops do not survive a restart without re-running setup. Interfaces may change between Claude Code versions. Use it, but expect rough edges and verify with `claude agents --json` after setup.
+
 ### 1. Round 1 — scope
 
 Ask (via `AskUserQuestion`):

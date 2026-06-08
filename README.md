@@ -96,6 +96,8 @@ Validated test scripts persist to `scrutiny/` for regression coverage.
 
 ### inbox-loops
 
+> **Experimental.** Relies on undocumented Claude Code behavior (`claude --bg` background sessions and `CronCreate` scheduling). Crons are currently session-only, so loops do not survive a restart without re-running setup, and interfaces may shift between Claude Code versions.
+
 Bootstraps a multi-session "inbox" task system. Producer loops (PR, Jira, Vuln) each scan a source on a staggered cron and emit "needs action" tasks into shared queue files. A dispatcher loop routes each task to an auto-dispatched consumer subagent or escalates it to the user via push notification. Every loop runs as its own cron-armed background session and self-re-arms near the 7-day cron expiry to stay live indefinitely.
 
 Invoke with `/parallel-minds:inbox-loops`, or describe intent to set up, start, check status of, or stop the inbox loops.
