@@ -103,6 +103,8 @@ The rotation. Track which area is up by reading the most recent
 the length of the list. Read `loops.vuln.rotation` from config; if set, it
 overrides the default area list below.
 
+The table below is an example tuned for a specific codebase — set `loops.vuln.target_paths` and `loops.vuln.rotation` in your `config.yaml` to override it for your own repo.
+
 | Idx | Focus area                                            | Paths to scan                                                                                  |
 |-----|-------------------------------------------------------|------------------------------------------------------------------------------------------------|
 | 0   | Authentication + authorization                        | `src/backend/base/langflow/api/v1/login.py`, `src/backend/base/langflow/services/auth/*`, `src/backend/base/langflow/services/authorization/*`, route decorators across `api/v1/` and `api/v2/`. |

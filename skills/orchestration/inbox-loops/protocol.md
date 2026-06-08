@@ -39,7 +39,7 @@ the agents take it from there.
 | `vuln-loop.md`                  | The vuln-hunt loop agent (one session) | Tasks in `inbox-vulns.md` (sensitive)   |
 | `dispatcher.md`                 | The dispatcher loop (one session)      | Consumer dispatches + push notifications to Gabriel |
 | `consumer.md`                   | Worker agents (any session)            | Completed tasks (`[x]`) + side-effects  |
-| `README.md` (this file)         | All five — shared protocol             | —                                       |
+| `protocol.md` (this file)       | All five — shared protocol             | —                                       |
 
 The two loops are producers. They never read tasks they didn't write — only
 their own file (for `[x]` cleanup) and the other loop's file (for dedup).
@@ -129,9 +129,9 @@ Everything lives in `<inbox-dir>/`, the directory chosen at setup (recorded as `
 ├── inbox-prs.md                   # PR loop's queue
 ├── inbox-tickets.md               # Jira loop's queue
 ├── inbox-vulns.md                 # vuln-hunt loop's queue (SENSITIVE, local only)
-├── langflow-pending-reviews.md    # separate, manual ledger for review drafts
 └── loops/
     ├── protocol.md                # this file (shared protocol)
+    ├── dispatcher.md              # dispatcher (router) agent's instructions
     ├── pr-loop.md                 # PR loop agent's instructions
     ├── jira-loop.md               # Jira loop agent's instructions
     ├── vuln-loop.md               # vuln-hunt loop agent's instructions

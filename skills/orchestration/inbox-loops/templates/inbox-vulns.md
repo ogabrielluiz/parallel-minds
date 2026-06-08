@@ -5,7 +5,7 @@ last_diff_sha: <!-- set by vuln-loop agent -->
 area_cycle_index: <!-- set by vuln-loop agent -->
 
 This file holds vulnerability candidates surfaced by the vuln-hunt loop
-(`~/Projects/ideas/tasks/loops/vuln-loop.md`). Each entry is a code-review
+(`loops/vuln-loop.md`). Each entry is a code-review
 finding that an independent validator agent has confirmed has a real
 taint path or repro.
 
@@ -13,7 +13,7 @@ taint path or repro.
 GitHub comments, Jira tickets, Slack, gists, anything. Disclosure path runs
 through Gabriel.
 
-Format and routing: see `~/Projects/ideas/tasks/loops/README.md`. Each
+Format and routing: see `loops/protocol.md`. Each
 active entry spans **two lines** — the task line plus an indented `taint:`
 and `repro:` block.
 

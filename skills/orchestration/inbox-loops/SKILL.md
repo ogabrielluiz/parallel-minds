@@ -24,7 +24,7 @@ Run `claude agents --json` and parse the output for live session names `inbox-pr
 For each conflict (a loop is already running, or its inbox file already exists), ask via `AskUserQuestion`:
 
 - **keep** — leave the running session and files untouched; do not re-spawn.
-- **restart** — `claude stop <id>` for the live session, remove its entry from `~/.claude/scheduled_tasks.json` (so the durable cron doesn't orphan-fire), then re-spawn fresh.
+- **restart** — stop the session with `claude stop <id>` (its session-only cron dies with it), then re-spawn fresh. (Future-proof: if a build starts persisting crons to `~/.claude/scheduled_tasks.json`, also remove the loop's entry there before re-spawning.)
 - **skip** — don't touch anything; don't spawn.
 
 Handle each conflicting loop independently.

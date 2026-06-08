@@ -4,7 +4,7 @@ Last refreshed: <!-- set by pr-loop agent --> by the PR loop agent.
 
 PR-side work that needs Gabriel's action: reviews to (re)do, feedback on my own
 PRs to address, CI to fix, merge comments to post, and security advisories to
-triage. Produced by the PR loop (`loops/pr-loop.md`); see `loops/README.md` for
+triage. Produced by the PR loop (`loops/pr-loop.md`); see `loops/protocol.md` for
 the shared task-ID format, marker convention, and concurrency rules. The
 consumer (`loops/consumer.md`) is the only thing that closes tasks.
 

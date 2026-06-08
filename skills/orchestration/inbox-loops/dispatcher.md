@@ -140,7 +140,7 @@ d. Each subagent returns a one-line outcome. Aggregate them into the
    `[x] ✅ <date>`, move to closed section); you don't need to write
    anything to the inbox post-hoc.
 
-### 7. Report
+### 5. Report
 
 Two-line summary back to the cron context: how many tasks scanned, how
 many auto-dispatched (with kinds), how many escalated, how many already
@@ -239,7 +239,7 @@ before you report it as done or escalate it as a problem.
   check the real state.
 - **Verify, then report.** Cheap confirmations:
   - GitHub review submitted vs draft:
-    `gh pr view <N> --json reviews --jq '.reviews[] | select(.author.login=="ogabrielluiz") | {id,state,submittedAt}'`
+    `gh pr view <N> --json reviews --jq '.reviews[] | select(.author.login=="<loops.pr.github_login from config>") | {id,state,submittedAt}'`
     — `state:PENDING` / `submittedAt:null` means draft (fine);
     `APPROVED`/`CHANGES_REQUESTED`/`COMMENTED` with a timestamp means it
     went live (flag it).
