@@ -30,6 +30,18 @@ Glossary of terms used across this repo's skills. Use these terms consistently i
 
 **Verdict** (implementation-scrutiny output) — One of `STOP`, `PROCEED WITH CAUTION`, `CLEAN` — communicates the top-level finding to the user, followed by the detailed coverage map.
 
+**Loop** — a producer (`pr` / `jira` / `vuln`) or the dispatcher, each running as its own cron-armed background session.
+
+**Inbox** — a shared queue file (`inbox-prs.md` / `inbox-tickets.md` / `inbox-vulns.md`) of "needs action" tasks in `<kind>:<key>` format.
+
+**Consumer** — a worker subagent the dispatcher spawns (via the `Agent` tool) to process one inbox task; posts PENDING reviews only, never submits.
+
+**Dispatcher** — the router loop; buckets each task into `auto` / `escalate` / `both` and fans out consumers in parallel, capped per cycle.
+
+**Self-rearm** — each loop re-creating its own durable cron near the 7-day expiry so it stays live indefinitely.
+
+**inbox-dir** — the self-contained directory (`config.yaml` + inbox files + a copy of the loop docs) a setup run materializes.
+
 ## Anti-terms
 
 These phrasings drift away from the skills' intent. Avoid them in SKILL.md, agent prompts, and findings reports.
