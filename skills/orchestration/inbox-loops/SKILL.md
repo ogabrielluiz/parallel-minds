@@ -5,4 +5,100 @@ description: Bootstrap and run the inbox-loops system — pick loops, configure 
 
 # inbox-loops
 
-(bootstrap body added in Task 8)
+Sets up the inbox-loops system: gathers config interactively, materializes a self-contained inbox directory, and spawns one cron-armed background session per selected loop (PR, Jira, Vuln, Dispatcher). Each session arms its own durable cron and runs a first cycle immediately.
+
+### 1. Round 1 — scope
+
+Ask (via `AskUserQuestion`):
+
+1. Which loops to run — multi-select: **PR / Jira / Vuln / Dispatcher**.
+2. The inbox directory path (free-text; no default — always ask; expand a leading `~` to an absolute path).
+3. Whether to use durable crons (default yes).
+
+Watch for: the inbox-dir has no default by design. Never assume one or fill it in from context.
+
+### 2. Detect existing state
+
+Run `claude agents --json` and parse the output for live session names `inbox-pr`, `inbox-jira`, `inbox-vuln`, `inbox-dispatcher`. Also check whether `<inbox-dir>` already contains `config.yaml` or any `inbox-*.md` files.
+
+For each conflict (a loop is already running, or its inbox file already exists), ask via `AskUserQuestion`:
+
+- **keep** — leave the running session and files untouched; do not re-spawn.
+- **restart** — `claude stop <id>` for the live session, remove its entry from `~/.claude/scheduled_tasks.json` (so the durable cron doesn't orphan-fire), then re-spawn fresh.
+- **skip** — don't touch anything; don't spawn.
+
+Handle each conflicting loop independently.
+
+### 3. Round 2 — per-loop config
+
+Only for selected, non-skipped loops. Collect via `AskUserQuestion` per loop:
+
+- **PR:** `repo` (owner/name), `github_login`, `cadence` (default `13 */3 * * *`).
+- **Jira:** `project_key`, `jql_prefixes` (list), `cadence` (default `43 */3 * * *`).
+- **Vuln:** `target_paths` (list), `rotation` (list, may be empty), `cadence` (default `33 */6 * * *`).
+- **Dispatcher:** `consumer_cap` (default 5), `routing_overrides` (map, may be empty), `cadence` (default `23 * * * *`).
+
+Watch for: warn if a chosen cadence shares the same minute offset as another selected loop. The staggered defaults (`:13` / `:43` / `:33` / `:23`) exist specifically to prevent simultaneous file-writes; custom cadences that share a minute offset will cause grep races across inbox files.
+
+### 4. Materialize the inbox-dir
+
+1. Write `<inbox-dir>/config.yaml` using the collected answers. Follow the shape in [templates/config.example.yaml](templates/config.example.yaml). Set `inbox_dir` to the absolute path.
+2. For each `inbox-*.md` file that is missing, create it from the corresponding file in `templates/` — never overwrite a file the user chose to keep. If the dispatcher is selected, ensure all three inbox files (`inbox-prs.md`, `inbox-tickets.md`, `inbox-vulns.md`) exist, because the dispatcher reads all three regardless of which producer loops are running.
+3. `mkdir -p <inbox-dir>/loops` and copy the six sidecars into it: [protocol.md](protocol.md), [pr-loop.md](pr-loop.md), [jira-loop.md](jira-loop.md), [vuln-loop.md](vuln-loop.md), [dispatcher.md](dispatcher.md), [consumer.md](consumer.md).
+
+Watch for: only create inbox files for selected loops' queues when the dispatcher is not selected. When the dispatcher IS selected, create all three, because it scans all three inboxes.
+
+### 5. Spawn one session per selected loop
+
+For each selected, non-skipped loop, run the command below. Substitute `<loop>` from `{pr, jira, vuln, dispatcher}`, the session name `inbox-<loop>`, `<cadence>` from config, and `<inbox-dir>`.
+
+```bash
+claude --bg -n "inbox-<loop>" --dangerously-skip-permissions \
+  "Read <inbox-dir>/loops/<loop-doc> and follow it. It reads config from <inbox-dir>/config.yaml. CronCreate(cron='<cadence>', recurring=true, durable=true, prompt='run a <loop>-loop cycle per <inbox-dir>/loops/<loop-doc>'). Then run one full cycle now."
+```
+
+The doc filename differs by loop:
+
+| Loop        | `<loop-doc>`    | Cron prompt suffix                               |
+|-------------|-----------------|--------------------------------------------------|
+| `pr`        | `pr-loop.md`    | `run a pr-loop cycle per <inbox-dir>/loops/pr-loop.md`       |
+| `jira`      | `jira-loop.md`  | `run a jira-loop cycle per <inbox-dir>/loops/jira-loop.md`   |
+| `vuln`      | `vuln-loop.md`  | `run a vuln-loop cycle per <inbox-dir>/loops/vuln-loop.md`   |
+| `dispatcher`| `dispatcher.md` | `run a dispatcher cycle per <inbox-dir>/loops/dispatcher.md` |
+
+Note: the dispatcher's doc is `dispatcher.md`, not `dispatcher-loop.md`, and its cron prompt has no `-loop` suffix.
+
+Capture the short session id printed by each spawn.
+
+Watch for: `--dangerously-skip-permissions` is mandatory. Without it the spawned session hangs indefinitely on the MCP-trust modal and never arms its cron.
+
+### 6. Report
+
+Print a summary table:
+
+| Loop        | Session ID | Cadence        | Next fire (approx)  |
+|-------------|------------|----------------|---------------------|
+| pr          | `<id>`     | `13 */3 * * *` | (next :13 mark)     |
+| jira        | `<id>`     | `43 */3 * * *` | ...                 |
+| vuln        | `<id>`     | `33 */6 * * *` | ...                 |
+| dispatcher  | `<id>`     | `23 * * * *`   | ...                 |
+
+Note: recurring durable crons auto-expire after 7 days, but each loop self-re-arms at the end of every cycle (see the Self-rearm section in each loop's sidecar), so the loops stay live indefinitely.
+
+### 7. Status and stop
+
+**Status:**
+
+```bash
+claude agents --json   # filter for names starting with "inbox-"
+```
+
+Inside any running session, call `CronList` to inspect that session's registered cron.
+
+**Stop:**
+
+```bash
+claude stop <id>       # for each inbox-* session
+```
+
+Then remove the corresponding entries from `~/.claude/scheduled_tasks.json`. Durable crons outlive their session — if you skip this step, orphaned crons will fire into a dead session context.
