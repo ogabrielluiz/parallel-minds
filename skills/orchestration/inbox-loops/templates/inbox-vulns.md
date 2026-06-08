@@ -11,7 +11,7 @@ taint path or repro.
 
 **SENSITIVE.** Don't paste contents of this file into any public surface —
 GitHub comments, Jira tickets, Slack, gists, anything. Disclosure path runs
-through Gabriel.
+through the user.
 
 Format and routing: see `loops/protocol.md`. Each
 active entry spans **two lines** — the task line plus an indented `taint:`

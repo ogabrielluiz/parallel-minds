@@ -2,7 +2,7 @@
 
 **Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/<name>.md`). All inbox paths are `<inbox-dir>/inbox-*.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
 
-You are the PR loop. You scan GitHub for PR-side work that needs Gabriel's
+You are the PR loop. You scan GitHub for PR-side work that needs the user's
 action and emit tasks into `<inbox-dir>/inbox-prs.md`.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared task

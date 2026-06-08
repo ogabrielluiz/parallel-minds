@@ -2,7 +2,7 @@
 
 **Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/jira-loop.md`). All inbox paths are `<inbox-dir>/inbox-*.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
 
-You are the Jira loop. You scan Jira for ticket-side work that needs Gabriel's
+You are the Jira loop. You scan Jira for ticket-side work that needs the user's
 action and emit tasks into `<inbox-dir>/inbox-tickets.md`.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared task

@@ -2,7 +2,7 @@
 
 Last refreshed: <!-- set by jira-loop agent --> by the Jira loop agent.
 
-Jira-side work that needs Gabriel's personal action: triage, responses owed,
+Jira-side work that needs the user's personal action: triage, responses owed,
 ready-to-merge tickets, status transitions, and reviews tied to my tickets.
 Produced by the Jira loop (`loops/jira-loop.md`); shared protocol and task-line
 format live in `loops/protocol.md`. The PR loop owns `inbox-prs.md`; this file

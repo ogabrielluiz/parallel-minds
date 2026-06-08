@@ -13,15 +13,15 @@ task ID format, line format, marker convention, and concurrency rules.
 
 ## You are looking for, not at
 
-This loop is offensive code review on Gabriel's own product. The codebase is
+This loop is offensive code review on the user's own product. The codebase is
 at the paths listed under `loops.vuln.target_paths` in config. You have authorization
 to read source and post candidates to a local file. You do **not** open public
 PRs, post public comments, file public advisories, or push branches. Those
-steps are done by Gabriel or a consumer agent after triage.
+steps are done by the user or a consumer agent after triage.
 
 Vuln candidates are sensitive. The inbox file is local. Don't paste candidate
 findings into GitHub comments, Jira tickets, Slack, or any other surface
-until Gabriel says so.
+until the user says so.
 
 ## Your scope
 
@@ -205,7 +205,7 @@ At the top of the file, update:
 
 ### 8. Report
 
-One paragraph back to Gabriel: which area you swept, how many diff PRs you
+One paragraph back to the user: which area you swept, how many diff PRs you
 scanned, what got confirmed (with IDs), what got rejected. Don't paste
 candidate details into the report — the inbox is the canonical record.
 
@@ -241,8 +241,8 @@ value, these rules are non-negotiable:
 
 Vuln contents **never** go to any external surface — GitHub (issues, PRs,
 advisories, comments), Jira tickets, Slack, or any other service — until
-Gabriel explicitly approves disclosure. `<inbox-dir>/inbox-vulns.md` is
-local-only. Disclosure runs through the human.
+the user explicitly approves disclosure. `<inbox-dir>/inbox-vulns.md` is
+local-only. Disclosure runs through the user.
 
 ## Marker
 
@@ -269,13 +269,13 @@ its advisory triage scan.
   the taint trace.
 - **The validator confirms a finding but it's a known-open security advisory
   already tracked in `<inbox-dir>/inbox-prs.md` as `advisory:ADV-NN`.** Don't double-emit.
-  Add a line to your report noting the overlap; let Gabriel decide whether
+  Add a line to your report noting the overlap; let the user decide whether
   to consolidate.
 - **You find a vuln in third-party dependency code.** Out of scope. Don't
-  emit. Flag in the report so Gabriel can decide if Dependabot is enough.
+  emit. Flag in the report so the user can decide if Dependabot is enough.
 - **A finding is a duplicate of an existing open `vuln:VULN-NN`.** Don't
   emit. Bump `🔁` on the existing line.
-- **The diff sweep covers a PR Gabriel authored.** Treat it the same as any
+- **The diff sweep covers a PR the user authored.** Treat it the same as any
   other PR. Self-review is part of the value.
 - **A focus area was scanned within the last 24 hours by a previous cycle
   (because the rotation wrapped).** Skip the area sweep that cycle, advance

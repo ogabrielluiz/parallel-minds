@@ -10,7 +10,7 @@ task ID format, line format, marker convention, and concurrency rules.
 
 ## How you're dispatched
 
-Gabriel (or another orchestrator) points you at one of:
+The user (or another orchestrator) points you at one of:
 
 1. **A specific task ID** — "go to `<inbox-dir>/inbox-prs.md`, do `review:#13469`"
 2. **A whole section** — "work through `#pr-advisories` in `<inbox-dir>/inbox-prs.md`"
@@ -24,7 +24,7 @@ that wrote it — flag it and stop, don't guess.
 
 ### 1. Find the task
 
-- For a specific ID: `grep -n '^- \[ \] <kind>:<key>' <inbox-dir>/inbox-*.md`. The line should appear in exactly one file. If it's missing, it was already closed or it never existed; tell Gabriel.
+- For a specific ID: `grep -n '^- \[ \] <kind>:<key>' <inbox-dir>/inbox-*.md`. The line should appear in exactly one file. If it's missing, it was already closed or it never existed; tell the user.
 - For a section: read the file, scan only the section with the matching `{#anchor}`.
 - For "next stale": read both inboxes, find lines under `## Stale ... {#stale}`.
 
@@ -35,20 +35,20 @@ Each kind has a default action. If the task line says something more specific
 
 | Kind                              | What "done" looks like                                                                                  |
 |-----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `review:#NNNNN`                   | Run the `pr-review` skill on the PR. Post a PENDING review. Don't submit it — that's Gabriel's call.    |
+| `review:#NNNNN`                   | Run the `pr-review` skill on the PR. Post a PENDING review. Don't submit it — that's the user's call.  |
 | `re-review:#NNNNN`                | Same as `review`, but the prior review's findings may already be partly resolved by the new commits.    |
-| `address:#NNNNN`                  | Read the reviewer/bot comments, decide on each, post a reply or push a fix. Each reply carries `<!-- inbox-bot:pr-loop -->` if you authored it as the bot. Don't push to Gabriel's branch without permission. |
-| `ci-fix:#NNNNN`                   | Investigate the failing check, propose a fix locally, present to Gabriel for go/no-go.                  |
+| `address:#NNNNN`                  | Read the reviewer/bot comments, decide on each, post a reply or push a fix. Each reply carries `<!-- inbox-bot:pr-loop -->` if you authored it as the bot. Don't push to the user's branch without permission. |
+| `ci-fix:#NNNNN`                   | Investigate the failing check, propose a fix locally, present to the user for go/no-go.                 |
 | `verify-fix:#NNNNN`               | Check that the author addressed each finding from the requested-changes review. If yes, post APPROVED (carries `<!-- inbox-bot:pr-loop -->`). If no, post a reply pointing at the still-broken finding. |
 | `merge-comment:#NNNNN→LE-NNNN`    | Post a comment on the linked Jira ticket starting with `<!-- inbox-bot:pr-loop -->`, summarizing the merge (PR title, merge SHA, brief impact). Do NOT transition the ticket — that's `transition:`. |
-| `transition:LE-NNNN`              | Move the ticket to the right status. Default target: Done. Confirm with Gabriel if the ticket has open subtasks or a non-trivial workflow.                                                                            |
+| `transition:LE-NNNN`              | Move the ticket to the right status. Default target: Done. Confirm with the user if the ticket has open subtasks or a non-trivial workflow.                                                                          |
 | `triage:LE-NNNN`                  | Read the ticket. Either write an initial plan/comment, push it back with questions, or split into subtasks. Bot comments carry `<!-- inbox-bot:jira-loop -->`.                                                         |
 | `respond:LE-NNNN`                 | Reply to the @-mention. Each reply you author starts with `<!-- inbox-bot:jira-loop -->`.               |
-| `merge:LE-NNNN`                   | Merge the linked PR (after final checks). If you're unsure about the merge strategy, ask Gabriel.       |
-| `advisory:ADV-NN`                 | Triage the advisory: confirm reproducibility, propose patch + disclosure timeline, file the patch on a branch. Don't open the PR or publish the advisory without Gabriel's go-ahead. |
+| `merge:LE-NNNN`                   | Merge the linked PR (after final checks). If you're unsure about the merge strategy, ask the user.      |
+| `advisory:ADV-NN`                 | Triage the advisory: confirm reproducibility, propose patch + disclosure timeline, file the patch on a branch. Don't open the PR or publish the advisory without the user's go-ahead. |
 | `vuln:VULN-NN`                    | Triage a vuln candidate found by the vuln-hunt loop. Read the entry's `taint:` and `repro:` sub-lines. Reproduce locally (no network exploits — code-level repro only). If real → file a draft patch on a local branch, mark `[x] ✅ <today> (branch: <name>)`, do NOT push or open a PR. If not real → mark `[x] ✅ <today> (false positive: <one-line reason>)`. **Treat vuln entries as sensitive — don't paste contents into GitHub, Jira, Slack, or any other surface.** |
 
-If you don't know how to do the action, ask Gabriel — don't invent it.
+If you don't know how to do the action, ask the user — don't invent it.
 
 ### 3. Do the work
 
@@ -90,7 +90,7 @@ Some kinds explicitly cross systems (`merge-comment`, `transition`,
 
 ### 6. Report
 
-A two-line summary back to Gabriel: which task, what you did, what's left
+A two-line summary back to the user: which task, what you did, what's left
 (if any). If you only got partway, leave the task `[ ]` and add a short
 note to the line about progress so the next consumer doesn't restart.
 
@@ -104,15 +104,15 @@ note to the line about progress so the next consumer doesn't restart.
   don't own, but they may rewrite `🔁` dates or move a line to `[x]` if the
   underlying condition vanished (PR closed, advisory withdrawn). If your
   target line disappears, re-read the file and decide: either it's already
-  resolved (your work is moot), or there's a real conflict — tell Gabriel.
+  resolved (your work is moot), or there's a real conflict — tell the user.
 
 ## What you do NOT do
 
-- Submit PR reviews (post them as PENDING; Gabriel submits).
+- Submit PR reviews (post them as PENDING; the user submits).
 - Open public PRs from security-advisory branches (private fixes only;
-  Gabriel coordinates disclosure).
+  the user coordinates disclosure).
 - Open *any* PR — public or private — from a `vuln:VULN-NN` patch branch.
-  Disclosure path runs through Gabriel.
+  Disclosure path runs through the user.
 - Run live exploits against any langflow instance — your repro is
   code-level (a unit test, a function-call trace, a synthetic flow JSON).
   Not curl-against-prod, not curl-against-dev-running-on-localhost.
@@ -120,7 +120,7 @@ note to the line about progress so the next consumer doesn't restart.
   public gist, or any other surface. The file is local for a reason.
 - Edit `<inbox-dir>/inbox-*.md` lines you didn't claim.
 - Add new task kinds. If the work doesn't fit an existing kind, ask
-  Gabriel to add one in `<inbox-dir>/loops/protocol.md` (and the relevant loop doc).
+  the user to add one in `<inbox-dir>/loops/protocol.md` (and the relevant loop doc).
 - Skip the marker. Ever.
 
 ## Quick reference — finding a task

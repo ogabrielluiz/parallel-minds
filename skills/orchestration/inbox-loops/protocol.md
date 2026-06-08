@@ -3,7 +3,7 @@
 > Per-user settings live in <inbox-dir>/config.yaml. This protocol is shared by all loops and consumers.
 
 Three agents, one shared queue. Each agent runs in its own Claude Code session
-and reads exactly one doc in this folder. Gabriel points sessions at docs and
+and reads exactly one doc in this folder. The user points sessions at docs and
 the agents take it from there.
 
 ```
@@ -37,7 +37,7 @@ the agents take it from there.
 | `pr-loop.md`                    | The PR loop agent (one session)        | Tasks in `inbox-prs.md`                 |
 | `jira-loop.md`                  | The Jira loop agent (one session)      | Tasks in `inbox-tickets.md`             |
 | `vuln-loop.md`                  | The vuln-hunt loop agent (one session) | Tasks in `inbox-vulns.md` (sensitive)   |
-| `dispatcher.md`                 | The dispatcher loop (one session)      | Consumer dispatches + push notifications to Gabriel |
+| `dispatcher.md`                 | The dispatcher loop (one session)      | Consumer dispatches + push notifications to the user |
 | `consumer.md`                   | Worker agents (any session)            | Completed tasks (`[x]`) + side-effects  |
 | `protocol.md` (this file)       | All five — shared protocol             | —                                       |
 
@@ -140,7 +140,7 @@ Everything lives in `<inbox-dir>/`, the directory chosen at setup (recorded as `
 
 **`<inbox-dir>/inbox-vulns.md` is sensitive.** Don't surface its contents to any
 external system (GitHub comments, Jira tickets, Slack, etc.) without
-explicit go-ahead from Gabriel. Disclosure flow runs through Gabriel, not
+explicit go-ahead from the user. Disclosure flow runs through the user, not
 through the inbox.
 
 ## Concurrency
@@ -174,13 +174,13 @@ The dispatcher runs hourly so newly-emitted tasks get routed within ~30 min
 on average. The vuln-hunt loop runs less often because each cycle is heavier
 (real code review + a validator pass per candidate).
 
-Consumers run on demand — when Gabriel (or another orchestrator) dispatches
+Consumers run on demand — when the user (or another orchestrator) dispatches
 a session at `consumer.md`.
 
 ## What "needs action" means (the bar)
 
-A task only enters the inbox if it's something **Gabriel personally has to
-do or decide**. Not "Gabriel might find this interesting". Not "Gabriel is
+A task only enters the inbox if it's something **the user personally has to
+do or decide**. Not "the user might find this interesting". Not "the user is
 on the watcher list". The test:
 
 > If I do nothing about this item for 2 days, does something measurably
