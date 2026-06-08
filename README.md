@@ -107,7 +107,7 @@ Invoke with `/parallel-minds:inbox-loops`, or describe intent to set up, start, 
 | Vuln | `inbox-vulns.md` (sensitive, local-only) | `33 */6 * * *` |
 | Dispatcher | routes the three inboxes | `23 * * * *` |
 
-**Lifecycle:** status via `claude agents --json` (filter `inbox-*`); stop via `claude stop <id>` followed by removing durable cron entries from `~/.claude/scheduled_tasks.json`.
+**Lifecycle:** status via `claude agents --json` (filter `inbox-*`); stop via `claude stop <id>`. Crons are session-only on current Claude Code builds, so stopping a session drops its cron; after a restart or reboot, re-run the skill to re-spawn the loops.
 
 The dispatcher spawns consumer subagents using the built-in `Agent` tool (the parallel-swarm element): multiple `Agent` calls in a single message run in parallel, capped per cycle. Vuln entries never leave the machine.
 

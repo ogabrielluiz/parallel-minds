@@ -83,7 +83,9 @@ Print a summary table:
 | vuln        | `<id>`     | `33 */6 * * *` | ...                 |
 | dispatcher  | `<id>`     | `23 * * * *`   | ...                 |
 
-Note: recurring durable crons auto-expire after 7 days, but each loop self-re-arms at the end of every cycle (see the Self-rearm section in each loop's sidecar), so the loops stay live indefinitely.
+Note: each loop runs as long as its background session is alive (sessions are daemon-supervised and persist for days). Recurring crons auto-expire after 7 days, but each loop self-re-arms at the end of every cycle (see the Self-rearm section in each sidecar), so a long-lived session stays on indefinitely.
+
+Watch for: crons are currently session-only. `durable: true` is accepted but this Claude Code build does not persist crons to `~/.claude/scheduled_tasks.json`, so a full restart or machine reboot drops both the sessions and their crons. To recover, re-run this skill: step 2 detects the missing loops and re-spawns them.
 
 ### 7. Status and stop
 
@@ -101,4 +103,4 @@ Inside any running session, call `CronList` to inspect that session's registered
 claude stop <id>       # for each inbox-* session
 ```
 
-Then remove the corresponding entries from `~/.claude/scheduled_tasks.json`. Durable crons outlive their session — if you skip this step, orphaned crons will fire into a dead session context.
+Crons are session-only on current builds, so stopping the session also drops its cron (nothing to scrub). If a future build starts persisting crons to `~/.claude/scheduled_tasks.json`, remove the loop's entry there too so it cannot fire into a dead session.
