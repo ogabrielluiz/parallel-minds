@@ -1,7 +1,7 @@
 {
   "name": "parallel-minds",
   "description": "A collection of Claude Code skills that leverage parallel agent swarms for creative exploration, ideation, and problem-solving",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "ogabrielluiz",
     "url": "https://github.com/ogabrielluiz"
