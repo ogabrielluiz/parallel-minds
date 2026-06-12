@@ -1,58 +1,63 @@
 filters:
   and:
-    - file.inFolder("tasks")
-
+    # Task files are identified by their frontmatter, not their folder path —
+    # this is vault-position-independent. Every task file carries `kind` and
+    # `inbox`; nothing else in the vault does. (If you'd rather scope by folder,
+    # replace these with file.inFolder("<vault-relative path to your tasks/ dir>").)
+    - kind != ""
+    - inbox != ""
 formulas:
-  age_days: '(now() - file.ctime).days.round(0)'
-
+  display_status: if(status == "new", "1 To Do", if(status == "claimed", "1 To Do", if(status == "progress", "2 In Progress", if(status == "blocked", "3 Blocked", if(status == "done", "4 Done", "Unknown")))))
+  age_days: (now() - file.ctime).days.round(0)
 properties:
   status:
-    displayName: "Status"
+    displayName: Status
   kind:
-    displayName: "Kind"
+    displayName: Kind
   key:
-    displayName: "Key"
+    displayName: Key
   via:
-    displayName: "Source loop"
+    displayName: Source loop
   linked:
-    displayName: "Linked"
+    displayName: Linked
   title:
-    displayName: "Title"
+    displayName: Title
   created:
-    displayName: "Created"
+    displayName: Created
   due:
-    displayName: "Due"
+    displayName: Due
   refreshed:
-    displayName: "Refreshed"
+    displayName: Refreshed
   closed:
-    displayName: "Closed"
+    displayName: Closed
   priority:
-    displayName: "Priority"
+    displayName: Priority
   auto:
-    displayName: "Auto override"
+    displayName: Auto override
   block_reason:
-    displayName: "Blocked because"
+    displayName: Blocked because
   source:
-    displayName: "Found via"
+    displayName: Found via
   inbox:
-    displayName: "Inbox"
+    displayName: Inbox
   attack:
-    displayName: "Attack class"
+    displayName: Attack class
   repro:
-    displayName: "Repro"
+    displayName: Repro
   file_ref:
-    displayName: "File"
+    displayName: File
   formula.age_days:
-    displayName: "Age (days)"
-
+    displayName: Age (days)
+  formula.display_status:
+    displayName: Column
 views:
   - type: cards
-    name: "Board"
+    name: Board
     filters:
       and:
-        - 'status != "done"'
+        - status != "done"
     groupBy:
-      property: status
+      property: formula.display_status
       direction: ASC
     order:
       - title
@@ -60,14 +65,26 @@ views:
       - key
       - priority
       - due
-      - refreshed
       - block_reason
-
-  - type: table
-    name: "All open"
+  - type: cards
+    name: By kind
     filters:
       and:
-        - 'status != "done"'
+        - status != "done"
+    groupBy:
+      property: kind
+      direction: ASC
+    order:
+      - title
+      - key
+      - status
+      - priority
+      - due
+  - type: table
+    name: All open
+    filters:
+      and:
+        - status != "done"
     order:
       - due
     properties:
@@ -80,12 +97,11 @@ views:
       - due
       - refreshed
       - block_reason
-
   - type: table
-    name: "Done log"
+    name: Done log
     filters:
       and:
-        - 'status == "done"'
+        - status == "done"
     order:
       - closed desc
     properties:
