@@ -106,7 +106,8 @@ The cron prompt that woke you already told you to re-read this file and `protoco
    > Re-read <inbox-dir>/loops/vuln-loop.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one vuln-loop cycle following them.
 
    If your active cron's prompt is an older form (e.g. `run a vuln-loop cycle per ...` with no re-read instruction), or its cadence differs from `loops.vuln.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
-3. Then proceed to step 1.
+3. Note the `Protocol version:` line near the top of `protocol.md`. You echo it in your cycle report so the user can confirm which doc version you're running.
+4. Then proceed to step 1.
 
 ### 1. Refresh state
 
@@ -254,7 +255,9 @@ Leave `sensitivity` untouched.
 
 ### 8. Report
 
-One paragraph back to the user: which area you swept, how many diff PRs you
+Begin with `protocol v<X>` (the version you read in reconcile, step 0) so the
+report names the doc version this cycle ran on. Then one paragraph back to the
+user: which area you swept, how many diff PRs you
 scanned, what got confirmed (with IDs), what got rejected. Don't paste
 candidate details into the report — the task files are the canonical record.
 

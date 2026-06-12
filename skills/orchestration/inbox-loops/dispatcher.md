@@ -71,7 +71,8 @@ The cron prompt that woke you already told you to re-read this file and `protoco
    > Re-read <inbox-dir>/loops/dispatcher.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one dispatcher cycle following them.
 
    If your active cron's prompt is an older form (e.g. `run a dispatcher cycle per ...` with no re-read instruction), or its cadence differs from `loops.dispatcher.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
-3. Then proceed to step 1.
+3. Note the `Protocol version:` line near the top of `protocol.md`. You echo it in your cycle report so the user can confirm which doc version you're running.
+4. Then proceed to step 1.
 
 ### 1. Scan `tasks/`
 
@@ -143,7 +144,7 @@ Drop entries from `<inbox-dir>/.dispatcher-pushed.json` whose task ID no longer 
 
 ### 7. Report
 
-Two-line summary back to the cron context: how many tasks scanned, how many auto-dispatched (with kinds), how many escalated, how many skipped as already-claimed, how many stuck claims reverted.
+Begin with `protocol v<X>` (the version you read in reconcile, step 0) so the report names the doc version this cycle ran on. Then a two-line summary back to the cron context: how many tasks scanned, how many auto-dispatched (with kinds), how many escalated, how many skipped as already-claimed, how many stuck claims reverted.
 
 ## Push notification rules
 

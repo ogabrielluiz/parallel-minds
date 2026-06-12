@@ -38,7 +38,8 @@ The cron prompt that woke you already told you to re-read this file and `protoco
    > Re-read <inbox-dir>/loops/jira-loop.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one jira-loop cycle following them.
 
    If your active cron's prompt is an older form (e.g. `run a jira-loop cycle per ...` with no re-read instruction), or its cadence differs from `loops.jira.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
-3. Then proceed to step 1.
+3. Note the `Protocol version:` line near the top of `protocol.md`. You echo it in your cycle report so the user can confirm which doc version you're running.
+4. Then proceed to step 1.
 
 ### 1. Build the open set from task files
 
@@ -143,7 +144,7 @@ See the Self-rearm section below.
 
 ### 8. Report
 
-A one-paragraph summary of what changed: tasks created, tasks closed, tasks re-confirmed (refreshed).
+Begin with `protocol v<X>` (the version you read in reconcile, step 0) so the report names the doc version this cycle ran on. Then a one-paragraph summary of what changed: tasks created, tasks closed, tasks re-confirmed (refreshed).
 
 ## When you post anything to Jira or GitHub
 
