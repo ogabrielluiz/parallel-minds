@@ -206,6 +206,12 @@ You own the consequences of every consumer you spawn. A subagent's self-report a
 - **A subagent claim that contradicts the warning is a check, not a verdict.** When the consumer says "PENDING" and the harness says "submitted", you don't pick a side — you run the one-line query and find out. Report the verified fact.
 - **If a real publish slipped out that shouldn't have, say so plainly and name the undo** (e.g. the review id to delete), don't bury it in a cycle summary.
 
+## Feedback on the work
+
+You already push notifications — this is a second, narrower use of the same channel. If a cycle shows the *setup* isn't working — consumers persistently returning weak or failed results on one kind, a routing override that misfires, the same stuck task filling `tasks/` every cycle, lots of dispatch effort producing little useful output — record it per the "Feedback on the work" section in `protocol.md`: write `<inbox-dir>/feedback/<slug>.md` with `from: dispatcher`, and push-notify (using your normal `PushNotification` path) only when you judge the user needs to act before trusting more output.
+
+Keep it distinct from task escalations: a task push says "a work item needs you" (tracked in `.dispatcher-pushed.json`); a feedback push says "the setup itself isn't working" (tracked by `notified: true` in the feedback file). Don't double-count one as the other.
+
 ## How you're invoked
 
 Read `loops.dispatcher.cadence` from `<inbox-dir>/config.yaml` for the cron schedule.

@@ -7,7 +7,7 @@ emitted, do the work the task describes, and mark the task done.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared
 task ID format, filename rules, frontmatter schema, status state machine,
-the cycle-prevention rule (author identity, no markers), and concurrency rules.
+cycle-prevention rule (author identity, no markers), and concurrency rules.
 
 ## How you're dispatched
 
@@ -132,6 +132,12 @@ left (if any). If you only got partway, leave the file at `status: progress`
 or `status: blocked` (with `block_reason`) and add a short `## Notes` line
 about progress so the next consumer doesn't restart.
 
+## Feedback on the work
+
+You're the agent most likely to hit this, because you do the actual work. If doing the task shows the *setup* isn't working — the task file doesn't give you enough to do it well so you're guessing, the prompt or consumer doc is ambiguous or contradicts what the system allows, or the output you're producing is weak and you wouldn't trust it yourself — say so. Record it per the "Feedback on the work" section in `protocol.md`: write `<inbox-dir>/feedback/<slug>.md` with `from: consumer`, and push-notify only when you judge the user needs to act before trusting your output.
+
+This is not the same as `status: blocked`. Blocked means *this task* needs the user before it can finish; you set `block_reason` and stop. Feedback means the *setup* is wrong in a way that will keep producing bad results or keep biting future tasks; you write a feedback file and keep going (or block too, if both are true). If you posted a result you weren't confident in — a thin PR review, a triage comment you had to guess at — leave the feedback file so the user knows to check it before relying on it. A near-miss (you almost pasted vuln content somewhere external, an action felt riskier than the doc implied) is always worth a feedback file.
+
 ## Concurrency caveats
 
 - **Don't edit files you don't own.** If two consumers are dispatched at
@@ -166,7 +172,7 @@ about progress so the next consumer doesn't restart.
   `title`, `created`, `due`, `inbox`, `source`, `priority`, `auto`).
 - Add new task kinds. If the work doesn't fit an existing kind, ask
   the user to add one in `<inbox-dir>/loops/protocol.md` (and the relevant loop doc).
-- Skip the marker. Ever.
+- Add a machine marker, HTML comment, bot signature, or "posted by" footer to anything you post.
 
 ## Quick reference — finding a task
 

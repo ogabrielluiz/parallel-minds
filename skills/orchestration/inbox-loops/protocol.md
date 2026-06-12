@@ -191,6 +191,8 @@ Everything lives in `<inbox-dir>/`, the directory chosen at setup (recorded as `
 │   └── archive/                      # closed tasks aged out (status: done, closed > archive_after_days ago)
 │       ├── review-13201.md
 │       └── ...
+├── feedback/                         # one file per process-feedback topic (see "Process feedback")
+│   └── pr-cadence-too-aggressive.md
 └── loops/                            # agent docs
     ├── protocol.md                   # this file
     ├── pr-loop.md
@@ -230,6 +232,56 @@ Because of that, every cycle starts by re-reading the docs from disk, and each l
 The one thing this can't do is force an *immediate* refresh before the next scheduled cycle. Claude Code blocks injecting a message into a live background session, so the floor is "propagates on the next cycle." If you need it sooner, restart the session.
 
 This mechanism is installed by the cron prompt set at spawn (see SKILL.md step 5). A loop spawned with an older, non-reconcile cron prompt won't self-update until it's respawned once with the reconcile-first prompt; from then on it sustains itself, including upgrading its own cron prompt if it ever finds an older form (per `### 0. Reconcile`).
+
+## Feedback on the work (tell the user when the setup isn't working)
+
+The loops, dispatcher, and consumers run unattended for days, working from prompts, task files, and config the user wrote once and then walked away from. When the work itself starts going wrong — the instructions are steering you wrong, you don't have enough to go on, the output you're producing is weak, or the loop is spinning without producing anything useful — **say so.** This is the channel for telling the user "the way you set this up isn't working," so they can fix the prompt or the config instead of trusting a pile of bad results. Don't silently absorb it and don't paper over it by guessing.
+
+What belongs here (this is feedback, not a task to work):
+
+- **The prompt or task file is steering you wrong** — unclear, contradictory, or asking for something that doesn't match reality. ("The consumer doc says post APPROVED on `verify-fix`, but I can't tell from the task file what findings I'm verifying against.")
+- **Not enough information to do it well, so you're guessing** — a task file missing context, a config value you needed and didn't have, an ambiguous ask. Flag the gap instead of inventing an answer.
+- **The results you're producing are weak or low-confidence** — say it before the user relies on them. ("I posted three PENDING reviews this cycle and wasn't confident in any of them; the diffs were larger than I could review well in one pass.")
+- **The process isn't being productive** — many cycles, little useful output; the loop keeps emitting tasks that go nowhere; effort spent is out of proportion to what comes out. ("The vuln loop has run 12 cycles and every candidate has been a false positive; the rotation may be pointed at the wrong code.")
+- Anything where, if the user were watching the run, they'd want to stop you and adjust the setup.
+
+### How to record it
+
+Feedback is one file per topic at `<inbox-dir>/feedback/<slug>.md`, where `<slug>` is a short kebab-case description (e.g. `pr-cadence-too-aggressive`, `vuln-kind-needs-severity-field`).
+
+```yaml
+---
+from: <pr-loop | jira-loop | vuln-loop | dispatcher | consumer>
+created: <YYYY-MM-DD>
+severity: low | medium | high
+notified: false
+about: <one-line topic>
+---
+
+What you noticed, why it matters, and the change you'd suggest if you have one.
+A few sentences. This is for the user to read, not for another agent to parse.
+```
+
+`severity` is your own read of how much it matters:
+
+- `low` — a small information gap or slightly-below-par output. An FYI. Worth writing down, not worth interrupting the user.
+- `medium` — the work is degraded: you're guessing on real decisions, or output quality is dropping. The user should see it on their next pass.
+- `high` — the setup is actively producing bad results or burning cycles for nothing. The user needs to act before trusting more output.
+
+### When to push-notify
+
+**Write the file every time. Send a push notification only when you judge the user should actually address it** — that's any `high`, and `medium` when it's actively costing something. `low` just sits in the file for the user to find. Don't push for things the user can read later; the push is for "this needs you."
+
+When you do notify:
+
+1. Fire one `PushNotification`, under 200 chars: `[inbox] feedback (<from>): <about>`. Never paste vuln details or anything sensitive — the push is a flag, the file is the record.
+2. Set `notified: true` in the file's frontmatter so no agent re-pushes the same topic.
+
+### Dedup and resolution
+
+Before writing, `ls <inbox-dir>/feedback/` (treat a missing directory as empty). If a file with the same `<slug>` already exists and isn't resolved, **don't create a second one and don't re-notify** — at most add one line to its body if you have genuinely new information. One topic, one file, one push.
+
+The user resolves feedback by reading and deleting the file (or moving it into `feedback/archive/`). Feedback files carry no `kind` or `inbox` field, so they never appear on the task kanban — this is a side channel to the user, not part of the work queue.
 
 ## What "needs action" means (the bar)
 

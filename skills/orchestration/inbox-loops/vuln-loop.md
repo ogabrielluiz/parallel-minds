@@ -274,6 +274,12 @@ Watch for: dedup must never read the body of a vuln task. Only frontmatter. The 
 
 This loop only writes local task files. It never posts a comment, review, advisory, or anything else to GitHub, Jira, or Slack. If a downstream consumer or the user later files a draft advisory from one of your candidates, that's their action and it carries no machine marker — every post in this system reads as if the user wrote it by hand.
 
+## Feedback on the work
+
+If a cycle shows the *setup* isn't working — every candidate keeps turning out to be a false positive (the rotation may be pointed at the wrong code), a `target_paths` entry no longer exists, you lack the context to judge whether a finding is real, or the loop is burning cycles without surfacing anything worth the user's time — say so. Record it per the "Feedback on the work" section in `protocol.md`: write `<inbox-dir>/feedback/<slug>.md` with `from: vuln-loop`, and push-notify only when you judge the user needs to act before trusting more output.
+
+A `PushNotification` about the work is allowed even though you never post to GitHub/Jira/Slack — it goes to the user, not an external surface. But the same sensitivity bar holds: the feedback file and its push describe the setup and the productivity of the loop, never a specific vulnerability. Never put taint traces, the file:line of a finding, or any `## Repro` content into a feedback file or a push.
+
 ## What you do NOT do
 
 - Open issues, PRs, or advisories on GitHub. Even private ones.

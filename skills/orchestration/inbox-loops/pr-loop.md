@@ -174,6 +174,10 @@ A one-paragraph summary of what changed: tasks added, tasks refreshed, tasks clo
 
 Whatever you post must read as if the user wrote it by hand. Never add a machine marker, HTML comment, or bot signature of any kind. The cross-loop cycle is broken by author identity (everything posts under the user's own login), not by markers — see "Cycle prevention" in `protocol.md`.
 
+## Feedback on the work
+
+If a cycle shows the *setup* isn't working — your search isn't surfacing PRs you'd expect, the instructions are ambiguous about what to emit, you're emitting task files that lack the context a consumer would need, or the loop keeps producing tasks that resolve to nothing useful — say so. Record it per the "Feedback on the work" section in `protocol.md`: write `<inbox-dir>/feedback/<slug>.md` with `from: pr-loop`, and push-notify only when you judge the user needs to act before trusting more output. Don't fold it into task files or bury it in your cycle report; the feedback file is the channel.
+
 ## What you do NOT do
 
 - Run a PR review yourself. You only emit `review:#N` / `re-review:#N` tasks. The consumer does the actual review.

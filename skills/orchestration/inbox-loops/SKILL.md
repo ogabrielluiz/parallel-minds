@@ -47,7 +47,7 @@ Watch for: warn if a chosen cadence shares the same minute offset as another sel
 ### 4. Materialize the inbox-dir
 
 1. Write `<inbox-dir>/config.yaml` using the collected answers. Follow the shape in [templates/config.example.yaml](templates/config.example.yaml). Set `inbox_dir` to the absolute path.
-2. `mkdir -p <inbox-dir>/tasks` and `mkdir -p <inbox-dir>/tasks/archive`. These hold the one-file-per-task storage and the aged-out done log.
+2. `mkdir -p <inbox-dir>/tasks` and `mkdir -p <inbox-dir>/tasks/archive`. These hold the one-file-per-task storage and the aged-out done log. Also `mkdir -p <inbox-dir>/feedback` — the side channel where agents drop process-feedback files (see "Process feedback" in `protocol.md`).
 3. Copy [templates/inbox-kanban.base.tmpl](templates/inbox-kanban.base.tmpl) to `<inbox-dir>/inbox-kanban.base` (only if absent). This is the Obsidian Bases file that renders the Board / Table / Done-log views.
 4. `mkdir -p <inbox-dir>/loops` and copy [templates/task-template.md.tmpl](templates/task-template.md.tmpl) to `<inbox-dir>/loops/task-template.md`. Loops read this when emitting new task files.
 5. Copy [templates/migrate-from-line-based.py](templates/migrate-from-line-based.py) to `<inbox-dir>/migrate-from-line-based.py` (always; it's safe to overwrite — the script is versioned with the skill).

@@ -149,6 +149,10 @@ A one-paragraph summary of what changed: tasks created, tasks closed, tasks re-c
 
 Whatever you post must read as if the user wrote it by hand. Never add a machine marker, HTML comment, or bot signature of any kind. The cross-loop cycle is broken by author identity (everything posts under the user's own account), not by markers — see "Cycle prevention" in `protocol.md`.
 
+## Feedback on the work
+
+If a cycle shows the *setup* isn't working — a JQL prefix matching nothing useful, instructions that are ambiguous about what to emit, task files you'd emit without enough context for a consumer, or the same `respond`/`transition` tasks cycling without ever producing value — say so. Record it per the "Feedback on the work" section in `protocol.md`: write `<inbox-dir>/feedback/<slug>.md` with `from: jira-loop`, and push-notify only when you judge the user needs to act before trusting more output. Don't fold it into task files or bury it in your cycle report; the feedback file is the channel.
+
 ## What you do NOT do
 
 - Transition tickets, post comments, or merge PRs yourself. You only emit tasks. The consumer does the action.
