@@ -162,14 +162,16 @@ The vuln loop refuses to emit a `vuln:VULN-NN` task without both sections. These
 
 Watch for: no body section other than `## Taint`, `## Repro`, and `## Notes` is allowed. Anything else belongs in frontmatter (as a new field) or in a separate doc. The body is intentionally restricted so the Bases queries stay predictable and the body doesn't drift into "another inbox".
 
-## Cycle prevention markers
+## Cycle prevention
 
-When either loop (or the consumer acting on a loop-emitted task) posts a comment in the *other* system, the comment **must** carry an HTML marker:
+Never inject any machine marker, HTML comment, or bot signature into a comment, review, or post. Everything the loops and consumers post must read as if the user wrote it by hand — no `<!-- ... -->` tags, no "posted by bot" footers, nothing.
 
-- PR loop / its consumer posting to Jira: `<!-- inbox-bot:pr-loop -->`
-- Jira loop / its consumer posting to GitHub: `<!-- inbox-bot:jira-loop -->`
+The cycle "PR merged → bot posts a Jira comment → Jira loop sees activity → emits `respond` → posts a GitHub comment → PR loop sees activity → ..." is broken by **author identity**, not by markers. Every comment a loop or consumer posts goes out under the user's own GitHub login / Jira account. So when a loop scans for "new activity that needs a response":
 
-Loops ignore any comment with `<!-- inbox-bot:* -->` when scanning for "new activity that needs a response" (`respond:`, `address:`). This breaks the cycle "PR merged → bot Jira comment → Jira loop sees activity → emits respond → posts bot GitHub comment → PR loop sees activity → ...".
+- The `respond:` scan looks for comments **mentioning the user, authored by someone else**, after the user's last activity. A comment the bot posted as the user is the user's own activity — it advances the "last activity" timestamp and never mentions the user, so it can't trigger a `respond:` to the user themselves.
+- The `address:` scan looks for reviewer/bot feedback on the user's PRs after the user's last activity. A comment the bot posted as the user is the user's activity, so it's skipped the same way.
+
+In both scans the rule is now: **skip any comment authored by the user's own identity** (`loops.pr.github_login` for GitHub, the configured Jira account for Jira). That is the cycle break. No marker needed, nothing visible ever lands in a comment.
 
 ## Directory layout
 

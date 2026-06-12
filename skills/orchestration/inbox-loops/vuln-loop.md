@@ -8,7 +8,7 @@ on the live repo. You file candidates as `<inbox-dir>/tasks/vuln-VULN-NN.md`
 files for a human or consumer agent to triage.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared task ID
-format, frontmatter schema, status state machine, marker convention, and
+format, frontmatter schema, status state machine, the cycle-prevention rule (author identity, no markers), and
 concurrency rules.
 
 ## You are looking for, not at
@@ -258,12 +258,9 @@ are local-only. Disclosure runs through the user.
 
 Watch for: dedup must never read the body of a vuln task. Only frontmatter. The `## Taint` content is sensitive; the dedup path only checks filename existence.
 
-## Marker
+## You never post anywhere
 
-You never post comments anywhere. If a downstream consumer decides to file
-a draft advisory based on your candidate, they prefix the GitHub advisory
-body with `<!-- inbox-bot:vuln-loop -->` so the PR loop ignores it during
-its advisory triage scan.
+This loop only writes local task files. It never posts a comment, review, advisory, or anything else to GitHub, Jira, or Slack. If a downstream consumer or the user later files a draft advisory from one of your candidates, that's their action and it carries no machine marker — every post in this system reads as if the user wrote it by hand.
 
 ## What you do NOT do
 
