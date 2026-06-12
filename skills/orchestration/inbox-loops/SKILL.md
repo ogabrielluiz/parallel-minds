@@ -61,19 +61,21 @@ For each selected, non-skipped loop, run the command below. Substitute `<loop>` 
 
 ```bash
 claude --bg -n "inbox-<loop>" --dangerously-skip-permissions \
-  "Read <inbox-dir>/loops/<loop-doc> and follow it. It reads config from <inbox-dir>/config.yaml. CronCreate(cron='<cadence>', recurring=true, durable=true, prompt='run a <loop>-loop cycle per <inbox-dir>/loops/<loop-doc>'). Then run one full cycle now."
+  "Read <inbox-dir>/loops/<loop-doc> and follow it. It reads config from <inbox-dir>/config.yaml. CronCreate(cron='<cadence>', recurring=true, durable=true, prompt='Re-read <inbox-dir>/loops/<loop-doc> and <inbox-dir>/loops/protocol.md fresh from disk, then run one <loop> cycle following them.'). Then run one full cycle now."
 ```
 
-The doc filename differs by loop:
+**The cron prompt is reconcile-first by design.** It instructs the session to re-read its loop doc and `protocol.md` from disk *every* cycle, before doing any work. The cron prompt is the one piece of text re-delivered fresh to a long-running session each fire (everything else can be cached in the session's context), so putting "re-read the docs" there is what lets a doc or config edit propagate to a live loop on its next cycle — no restart needed. Each loop's `### 0. Reconcile` step then re-reads config and re-arms its own cron if the cadence changed.
 
-| Loop        | `<loop-doc>`    | Cron prompt suffix                               |
-|-------------|-----------------|--------------------------------------------------|
-| `pr`        | `pr-loop.md`    | `run a pr-loop cycle per <inbox-dir>/loops/pr-loop.md`       |
-| `jira`      | `jira-loop.md`  | `run a jira-loop cycle per <inbox-dir>/loops/jira-loop.md`   |
-| `vuln`      | `vuln-loop.md`  | `run a vuln-loop cycle per <inbox-dir>/loops/vuln-loop.md`   |
-| `dispatcher`| `dispatcher.md` | `run a dispatcher cycle per <inbox-dir>/loops/dispatcher.md` |
+The doc filename and loop name differ by loop:
 
-Note: the dispatcher's doc is `dispatcher.md`, not `dispatcher-loop.md`, and its cron prompt has no `-loop` suffix.
+| Loop        | `<loop-doc>`    | `<loop>` (in the cron prompt)  |
+|-------------|-----------------|--------------------------------|
+| `pr`        | `pr-loop.md`    | `pr-loop`                      |
+| `jira`      | `jira-loop.md`  | `jira-loop`                    |
+| `vuln`      | `vuln-loop.md`  | `vuln-loop`                    |
+| `dispatcher`| `dispatcher.md` | `dispatcher`                   |
+
+Note: the dispatcher's doc is `dispatcher.md`, not `dispatcher-loop.md`, and its loop name in the cron prompt is `dispatcher` (no `-loop` suffix).
 
 Capture the short session id printed by each spawn.
 

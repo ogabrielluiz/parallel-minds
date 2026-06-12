@@ -96,6 +96,18 @@ yourself spending much longer on a single candidate, emit it with the data
 you have (`status: new`, `repro: high`) and move on. Consumer or user
 triages.
 
+### 0. Reconcile (first thing, every cycle)
+
+The cron prompt that woke you already told you to re-read this file and `protocol.md` fresh from disk, so you are running the current instructions, not a cached copy. Now sync your schedule and config:
+
+1. Re-read `<inbox-dir>/config.yaml`.
+2. `CronList` your active cron. The prompt it should carry is exactly:
+
+   > Re-read <inbox-dir>/loops/vuln-loop.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one vuln-loop cycle following them.
+
+   If your active cron's prompt is an older form (e.g. `run a vuln-loop cycle per ...` with no re-read instruction), or its cadence differs from `loops.vuln.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
+3. Then proceed to step 1.
+
 ### 1. Refresh state
 
 Find the highest existing `VULN-NN` by listing `<inbox-dir>/tasks/vuln-VULN-*.md` (active) and `<inbox-dir>/tasks/archive/vuln-VULN-*.md` (archived). The next free number is `max + 1`. New emissions in this cycle pick numbers sequentially from there.

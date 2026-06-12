@@ -217,6 +217,20 @@ Multiple loops, the dispatcher, and N consumers all touch `tasks/` simultaneousl
 
 Watch for: if you need to do many edits to the same file, do them in one `Edit` call with `replace_all: false` and a tight `old_string`, not a `Write` that replaces the whole file.
 
+## Self-updating loops (no restart for doc/config edits)
+
+A loop session runs for days. Its context caches whatever it read at spawn — so editing a loop doc or `config.yaml` on disk does **not**, by itself, change a running loop's behavior. The fix is the cron prompt.
+
+The cron prompt is the only text re-delivered *fresh* to a long-running session every cycle (it's re-injected at each fire; it can't be cached). So each loop's cron prompt is **reconcile-first**:
+
+> Re-read `<inbox-dir>/loops/<loop-doc>` and `<inbox-dir>/loops/protocol.md` fresh from disk, then run one `<loop>` cycle following them.
+
+Because of that, every cycle starts by re-reading the docs from disk, and each loop's `### 0. Reconcile` step then re-reads `config.yaml` and re-arms its own cron (`CronDelete` + `CronCreate`) if the cadence changed. Net effect: **edit a doc or config, save it, and the change lands on each loop's next cycle — no restart.**
+
+The one thing this can't do is force an *immediate* refresh before the next scheduled cycle. Claude Code blocks injecting a message into a live background session, so the floor is "propagates on the next cycle." If you need it sooner, restart the session.
+
+This mechanism is installed by the cron prompt set at spawn (see SKILL.md step 5). A loop spawned with an older, non-reconcile cron prompt won't self-update until it's respawned once with the reconcile-first prompt; from then on it sustains itself, including upgrading its own cron prompt if it ever finds an older form (per `### 0. Reconcile`).
+
 ## What "needs action" means (the bar)
 
 A task only enters the inbox if it's something **the user personally has to do or decide**. Not "the user might find this interesting". Not "the user is on the watcher list". The test:
