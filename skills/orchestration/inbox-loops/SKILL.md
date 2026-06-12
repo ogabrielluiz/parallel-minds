@@ -1,13 +1,13 @@
 ---
 name: inbox-loops
-description: Bootstrap and run the inbox-loops system — pick loops, configure them, materialize a self-contained inbox directory, and spawn one cron-armed background session per loop. Use when the user wants to set up, start, re-arm, check status of, or stop the PR / Jira / vuln / dispatcher inbox loops.
+description: Bootstrap and run the inbox-loops system — pick loops, configure them, materialize a self-contained inbox directory (file-per-task storage with an Obsidian Bases kanban view), and spawn one cron-armed background session per loop. Use when the user wants to set up, start, re-arm, check status of, or stop the PR / Jira / vuln / dispatcher inbox loops, or wants a kanban board of in-flight inbox work.
 ---
 
 # inbox-loops
 
-Sets up the inbox-loops system: gathers config interactively, materializes a self-contained inbox directory, and spawns one cron-armed background session per selected loop (PR, Jira, Vuln, Dispatcher). Each session arms its own durable cron and runs a first cycle immediately.
+Sets up the inbox-loops system: gathers config interactively, materializes a self-contained inbox directory, and spawns one cron-armed background session per selected loop (PR, Jira, Vuln, Dispatcher). Each session arms its own durable cron and runs a first cycle immediately. Tasks are stored one-file-per-task under `tasks/`, with an Obsidian Bases file (`inbox-kanban.base`) rendering Board / Table / Done-log views over them.
 
-> **Experimental.** This skill depends on undocumented Claude Code behavior: the `claude --bg` background-session mechanism and `CronCreate` scheduling. Crons are currently session-only (see step 6), so loops do not survive a restart without re-running setup. Interfaces may change between Claude Code versions. Use it, but expect rough edges and verify with `claude agents --json` after setup.
+> **Experimental.** This skill depends on undocumented Claude Code behavior: the `claude --bg` background-session mechanism and `CronCreate` scheduling. Crons are currently session-only (see step 6), so loops do not survive a restart without re-running setup. The storage model is file-per-task (one markdown file per task under `<inbox-dir>/tasks/`); the kanban is rendered by Obsidian's core **Bases** plugin from `<inbox-dir>/inbox-kanban.base`. Interfaces may change between Claude Code versions. Use it, but expect rough edges and verify with `claude agents --json` after setup.
 
 ### 1. Round 1 — scope
 
@@ -21,15 +21,17 @@ Watch for: the inbox-dir has no default by design. Never assume one or fill it i
 
 ### 2. Detect existing state
 
-Run `claude agents --json` and parse the output for live session names `inbox-pr`, `inbox-jira`, `inbox-vuln`, `inbox-dispatcher`. Also check whether `<inbox-dir>` already contains `config.yaml` or any `inbox-*.md` files.
+Run `claude agents --json` and parse the output for live session names `inbox-pr`, `inbox-jira`, `inbox-vuln`, `inbox-dispatcher`. Also check whether `<inbox-dir>` already contains `config.yaml`, a `tasks/` directory, an `inbox-kanban.base` file, or any legacy `inbox-*.md` files.
 
-For each conflict (a loop is already running, or its inbox file already exists), ask via `AskUserQuestion`:
+For each conflict (a loop is already running, or `config.yaml` / `tasks/` / `inbox-kanban.base` already exists), ask via `AskUserQuestion`:
 
 - **keep** — leave the running session and files untouched; do not re-spawn.
 - **restart** — stop the session with `claude stop <id>` (its session-only cron dies with it), then re-spawn fresh. (Future-proof: if a build starts persisting crons to `~/.claude/scheduled_tasks.json`, also remove the loop's entry there before re-spawning.)
 - **skip** — don't touch anything; don't spawn.
 
 Handle each conflicting loop independently.
+
+Watch for: if any legacy `inbox-prs.md` / `inbox-tickets.md` / `inbox-vulns.md` files exist at `<inbox-dir>` AND `tasks/` does not exist, the directory is on the old line-based storage model. Stop and prompt the user (via `AskUserQuestion`) to run `<inbox-dir>/migrate-from-line-based.py` before proceeding. The script is idempotent and leaves the legacy files in place; once `tasks/` exists, re-run this skill. Do not auto-run the migration without consent.
 
 ### 3. Round 2 — per-loop config
 
@@ -40,15 +42,18 @@ Only for selected, non-skipped loops. Collect via `AskUserQuestion` per loop:
 - **Vuln:** `target_paths` (list), `rotation` (list, may be empty), `cadence` (default `33 */6 * * *`).
 - **Dispatcher:** `consumer_cap` (default 5), `routing_overrides` (map, may be empty), `cadence` (default `23 * * * *`).
 
-Watch for: warn if a chosen cadence shares the same minute offset as another selected loop. The staggered defaults (`:13` / `:43` / `:33` / `:23`) exist specifically to prevent simultaneous file-writes; custom cadences that share a minute offset will cause grep races across inbox files.
+Watch for: warn if a chosen cadence shares the same minute offset as another selected loop. The staggered defaults (`:13` / `:43` / `:33` / `:23`) exist specifically to prevent simultaneous file-writes; custom cadences that share a minute offset will cause edit races across `tasks/`.
 
 ### 4. Materialize the inbox-dir
 
 1. Write `<inbox-dir>/config.yaml` using the collected answers. Follow the shape in [templates/config.example.yaml](templates/config.example.yaml). Set `inbox_dir` to the absolute path.
-2. For each `inbox-*.md` file that is missing, create it from the corresponding file in `templates/` — never overwrite a file the user chose to keep. If the dispatcher is selected, ensure all three inbox files (`inbox-prs.md`, `inbox-tickets.md`, `inbox-vulns.md`) exist, because the dispatcher reads all three regardless of which producer loops are running.
-3. `mkdir -p <inbox-dir>/loops` and copy the six sidecars into it: [protocol.md](protocol.md), [pr-loop.md](pr-loop.md), [jira-loop.md](jira-loop.md), [vuln-loop.md](vuln-loop.md), [dispatcher.md](dispatcher.md), [consumer.md](consumer.md).
+2. `mkdir -p <inbox-dir>/tasks` and `mkdir -p <inbox-dir>/tasks/archive`. These hold the one-file-per-task storage and the aged-out done log.
+3. Copy [templates/inbox-kanban.base.tmpl](templates/inbox-kanban.base.tmpl) to `<inbox-dir>/inbox-kanban.base` (only if absent). This is the Obsidian Bases file that renders the Board / Table / Done-log views.
+4. `mkdir -p <inbox-dir>/loops` and copy [templates/task-template.md.tmpl](templates/task-template.md.tmpl) to `<inbox-dir>/loops/task-template.md`. Loops read this when emitting new task files.
+5. Copy [templates/migrate-from-line-based.py](templates/migrate-from-line-based.py) to `<inbox-dir>/migrate-from-line-based.py` (always; it's safe to overwrite — the script is versioned with the skill).
+6. Copy the six sidecars into `<inbox-dir>/loops/`: [protocol.md](protocol.md), [pr-loop.md](pr-loop.md), [jira-loop.md](jira-loop.md), [vuln-loop.md](vuln-loop.md), [dispatcher.md](dispatcher.md), [consumer.md](consumer.md).
 
-Watch for: only create inbox files for selected loops' queues when the dispatcher is not selected. When the dispatcher IS selected, create all three, because it scans all three inboxes.
+Watch for: never overwrite a file the user chose to **keep** in step 2. The new model has no `inbox-prs.md` / `inbox-tickets.md` / `inbox-vulns.md` to create — those files belong to the legacy line-based model and are only present on directories that haven't migrated.
 
 ### 5. Spawn one session per selected loop
 
@@ -98,6 +103,8 @@ claude agents --json   # filter for names starting with "inbox-"
 ```
 
 Inside any running session, call `CronList` to inspect that session's registered cron.
+
+To inspect ongoing work, open `<inbox-dir>/inbox-kanban.base` in Obsidian. The Board view groups by `status` (`new` / `claimed` / `progress` / `blocked`), the All-open table is flat across kinds, and the Done log shows recently closed tasks. Raw task files live at `<inbox-dir>/tasks/<kind>-<key>.md` for direct grep/edit if needed.
 
 **Stop:**
 

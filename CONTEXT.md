@@ -32,15 +32,23 @@ Glossary of terms used across this repo's skills. Use these terms consistently i
 
 **Loop** — a producer (`pr` / `jira` / `vuln`) or the dispatcher, each running as its own cron-armed background session.
 
-**Inbox** — a shared queue file (`inbox-prs.md` / `inbox-tickets.md` / `inbox-vulns.md`) of "needs action" tasks in `<kind>:<key>` format.
+**Inbox** — a logical category of tasks for one source: `prs`, `tickets`, or `vulns`. The three inboxes share a single `tasks/` directory; the `inbox:` frontmatter field on each task file says which logical inbox it belongs to. Not a queue file anymore.
 
-**Consumer** — a worker subagent the dispatcher spawns (via the `Agent` tool) to process one inbox task; posts PENDING reviews only, never submits.
+**Task file** — one markdown file per task at `<inbox-dir>/tasks/<kind>-<key>.md`. Metadata lives in YAML frontmatter (including `inbox`, `kind`, `key`, `status`, `created`, `due`, `refreshed`, `linked`, `via`). Body is for kind-specific extras — vuln task files add `## Taint` and `## Repro` sections. Dedup is filename existence: if `<kind>-<key>.md` already exists, the loop skips creating a new one.
 
-**Dispatcher** — the router loop; buckets each task into `auto` / `escalate` / `both` and fans out consumers in parallel, capped per cycle.
+**Kanban base** — the Obsidian Bases YAML file at `<inbox-dir>/inbox-kanban.base`. Queries the `tasks/` directory and renders three views: Board (group by `status`), Table (all fields), and Done-log (filtered to `status: done`). Replaces the old grep-and-section-anchor model.
+
+**Status** — frontmatter enum with five values: `new` (loop just created it), `claimed` (dispatcher has assigned it to a consumer), `progress` (consumer is working), `blocked` (consumer needs input), `done` (consumer finished). Drives the kanban column the task renders in. Watch for: silent stalls — a task stuck on `claimed` for more than one dispatcher cycle is a dropped consumer, not normal.
+
+**Frontmatter ownership** — strict transition rules per role. Loops own `new` (create) and `done` (auto-close on resolution upstream). Dispatcher owns `claimed` (only it sets `new → claimed`). Consumer owns `progress`, `blocked`, and `done` for tasks it was claimed for. No role edits another role's fields. Watch for: cross-writes — a dispatcher rewriting `progress` back to `claimed` is a bug, not a recovery.
+
+**Consumer** — a worker subagent the dispatcher spawns (via the `Agent` tool) to process one task file; posts PENDING reviews only, never submits.
+
+**Dispatcher** — the router loop; reads `status: new` task files, buckets each into `auto` / `escalate` / `both`, sets `status: claimed`, and fans out consumers in parallel, capped per cycle.
 
 **Self-rearm** — each loop re-creating its own durable cron near the 7-day expiry so it stays live indefinitely.
 
-**inbox-dir** — the self-contained directory (`config.yaml` + inbox files + a copy of the loop docs) a setup run materializes.
+**inbox-dir** — the self-contained directory a setup run materializes. Contents: `config.yaml`, `tasks/` (one markdown file per task, all three inboxes mixed), `inbox-kanban.base` (Obsidian Bases view file), and a copy of the loop docs.
 
 ## Anti-terms
 
