@@ -1,13 +1,13 @@
 # Jira loop agent
 
-**Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/jira-loop.md`). All inbox paths are `<inbox-dir>/inbox-*.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
+**Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/jira-loop.md`). Task files live at `<inbox-dir>/tasks/<kind>-<key>.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
 
 You are the Jira loop. You scan Jira for ticket-side work that needs the user's
-action and emit tasks into `<inbox-dir>/inbox-tickets.md`.
+action and emit one task file per item into `<inbox-dir>/tasks/`.
 
-**First, read `<inbox-dir>/loops/protocol.md`** for the shared task
-ID format, line format, marker convention, and concurrency rules. Everything
-below assumes you already know that protocol.
+**First, read `<inbox-dir>/loops/protocol.md`** for the shared task ID
+format, filename rules, frontmatter schema, status state machine, and marker
+convention. Everything below assumes you already know that protocol.
 
 ## Your scope
 
@@ -29,9 +29,19 @@ You do **not** emit `address`, `ci-fix`, `verify-fix`, or `advisory:*` — those
 
 Run this exact sequence each fire.
 
-### 1. Refresh both inboxes' "open" state
+### 1. Build the open set from task files
 
-Read `<inbox-dir>/inbox-tickets.md` and `<inbox-dir>/inbox-prs.md`. Build an in-memory set of open task IDs from both. You will dedupe against this.
+List `<inbox-dir>/tasks/*.md`. For each file, read the frontmatter (only — never
+the body) and collect:
+
+- `kind`, `key` → task ID `<kind>:<key>`
+- `via`, `status`, `linked`
+
+Build an in-memory map keyed by task ID, with `via` and `status` recorded. You
+will dedupe against this in step 5.
+
+Watch for: files under `tasks/archive/` are not part of the open set. Treat them
+as absent.
 
 ### 2. Scan my assigned tickets
 
@@ -44,14 +54,14 @@ mcp__mcp-atlassian__jira_search
 
 Read `loops.jira.project_key` from config for the project key. Read `loops.jira.jql_prefixes` from config for any JQL prefix filters to apply.
 
-For each ticket:
+For each ticket, derive candidate task IDs:
 
-- **Status `To Do`, no activity from me in the issue history** → emit `triage:LE-NNNN` (only the first time you see it; once you've emitted it, don't re-emit until I close it).
-- **Status `Ready to Merge`** → check `issuelinks` for an open PR. If found → emit `merge:LE-NNNN`. The cross-link is the PR; record it as `linked:#NNNNN`.
-- **Status `In Progress` / `In Review` / similar non-terminal**, but `issuelinks` shows a linked PR that has merged → emit `transition:LE-NNNN linked:#NNNNN`.
-- **Has a linked open PR** → fetch the PR via `gh pr view <N>` and check whether my review covers the current head (same logic as PR loop):
-  - No review or pending → emit `review:#NNNNN linked:LE-NNNN`.
-  - Review exists but head has moved → emit `re-review:#NNNNN linked:LE-NNNN`.
+- **Status `To Do`, no activity from me in the issue history** → candidate `triage:LE-NNNN` (only the first time you see it; once you've emitted it, don't re-emit until I close it).
+- **Status `Ready to Merge`** → check `issuelinks` for an open PR. If found → candidate `merge:LE-NNNN` with `linked: '#NNNNN'`.
+- **Status `In Progress` / `In Review` / similar non-terminal**, but `issuelinks` shows a linked PR that has merged → candidate `transition:LE-NNNN` with `linked: '#NNNNN'`.
+- **Has a linked open PR** → fetch the PR via `gh pr view <N>` and check whether my review covers the current head:
+  - No review or pending → candidate `review:#NNNNN` with `linked: LE-NNNN`.
+  - Review exists but head has moved → candidate `re-review:#NNNNN` with `linked: LE-NNNN`.
 
 ### 3. Scan comments mentioning me on tickets I don't own
 
@@ -66,7 +76,7 @@ For each ticket from the result that I do not currently own:
 - Fetch comments via `mcp__mcp-atlassian__jira_get_issue` with `comment_limit` high enough.
 - Find comments after my last comment on the issue (or after my last assignment-from event if I was assigned).
 - Skip any comment whose body contains `<!-- inbox-bot:* -->`.
-- If a remaining comment @-mentions me by name or accountId → emit `respond:LE-NNNN`.
+- If a remaining comment @-mentions me by name or accountId → candidate `respond:LE-NNNN`.
 
 ### 4. Scan my merged PRs for missing Jira merge comments
 
@@ -77,75 +87,52 @@ gh pr list --author=@me --state=merged --search "merged:>=$(date -u -v-7d +%Y-%m
 For each merged PR:
 - Extract `LE-NNNN` from body or branch name.
 - If found, fetch the ticket via `mcp__mcp-atlassian__jira_get_issue` and scan comments.
-- If no comment containing `<!-- inbox-bot:pr-loop -->` exists → emit `merge-comment:#NNNNN→LE-NNNN`.
+- If no comment containing `<!-- inbox-bot:pr-loop -->` exists → candidate `merge-comment:#NNNNN→LE-NNNN` with `linked: LE-NNNN`.
 
 (This kind is shared with the PR loop. The first loop to see it wins; the
-second sees it in the open-set and just bumps `🔁`.)
+second sees it in the open-set and just bumps `refreshed`.)
 
-### 5. Dedup before write
+### 5. Dedup and write
 
-For every task ID you computed:
-- If the ID is in the in-memory open-set from step 1 (regardless of file) → don't add a new line; instead, on the existing line in `<inbox-dir>/inbox-tickets.md` (only if `via:jira-loop`), bump `🔁 <today>`.
-- If the ID exists in `<inbox-dir>/inbox-prs.md` (`via:pr-loop`) → don't touch it. The PR loop owns that line.
-- If the ID is not in either set → append a new line under the appropriate section in `<inbox-dir>/inbox-tickets.md`.
+For every candidate task ID you computed:
+
+1. Compute the filename per the protocol's filename algorithm (`<kind>-<transformed-key>.md`; `→` becomes `-`, `#` stripped).
+2. Resolve against the open-set map and the filesystem:
+
+| Case | Behavior |
+|------|----------|
+| Not in open-set, file does not exist in `tasks/` | Create `tasks/<filename>.md` with `status: new`, `via: jira-loop`, `inbox: tickets`, today's date in `created`, `due`, `refreshed`, plus `kind`, `key`, `linked`, `title`. |
+| In open-set with `via: jira-loop` and `status != done` | Edit the file: bump `refreshed` to today. Leave `status`, `created`, `due`, body alone. |
+| In open-set with `via: pr-loop` | Leave the file alone. The PR loop owns it. |
+| In open-set with `status: done` | Leave the file alone. The condition will re-emit on the next cycle if it actually re-fires (new filename collision is fine; section 6 handles it). |
+| File exists in `tasks/archive/` only | Treat as absent. Write a fresh `tasks/<filename>.md`. |
+
+Watch for: never load the body during dedup. Frontmatter only.
 
 ### 6. Mark resolved tasks
 
-For every existing open `[ ]` line in `<inbox-dir>/inbox-tickets.md`:
-- Re-derive whether the underlying condition still holds:
-  - `triage` → ticket is no longer `To Do`, or I've added at least one comment, or it's been reassigned.
-  - `respond` → I've posted a comment after the one that triggered it.
-  - `merge` → the linked PR merged, or the ticket left `Ready to Merge`.
-  - `transition` → ticket is now in a terminal status.
-  - `review` / `re-review` → covered by current head (or PR closed).
-  - `merge-comment` → the linked ticket now has a `<!-- inbox-bot:pr-loop -->` comment.
-- If not → mark `[x]` with `✅ <today>` and move the line into the `Submitted / closed` section.
+For every task file with `via: jira-loop` and `status` in {`new`, `claimed`, `progress`, `blocked`}:
 
-### 7. Update "Last refreshed"
+Re-derive whether the underlying condition still holds:
 
-Set the header date to today's date.
+- `triage` → ticket is no longer `To Do`, or I've added at least one comment, or it's been reassigned.
+- `respond` → I've posted a comment after the one that triggered it.
+- `merge` → the linked PR merged, or the ticket left `Ready to Merge`.
+- `transition` → ticket is now in a terminal status.
+- `review` / `re-review` → covered by current head (or PR closed).
+- `merge-comment` → the linked ticket now has a `<!-- inbox-bot:pr-loop -->` comment.
+
+If the condition no longer holds: edit frontmatter to set `status: done` and `closed: <today>`. Don't touch `created`, `due`, or the body.
+
+Watch for: you may only auto-close tasks you emitted (`via: jira-loop`). Never close a `via: pr-loop` file.
+
+### 7. Self-rearm
+
+See the Self-rearm section below.
 
 ### 8. Report
 
-A one-paragraph summary of what changed: tasks added, tasks closed, tasks re-confirmed.
-
-## File structure to maintain
-
-`<inbox-dir>/inbox-tickets.md` follows the same shape as `<inbox-dir>/inbox-prs.md`. Required sections, in order:
-
-```
-# Inbox — tickets
-
-Last refreshed: YYYY-MM-DD by the Jira loop agent.
-
-[short paragraph: what this is, link to loops/protocol.md]
-
-## Stale (past due) {#stale}
-[Obsidian Tasks query block]
-
-## Triage queue {#jira-triage}
-[triage:* tasks]
-
-## Responses owed {#jira-respond}
-[respond:* tasks]
-
-## Ready to merge {#jira-merge}
-[merge:* tasks]
-
-## Transitions to do {#jira-transition}
-[transition:* tasks]
-
-## Reviews tied to my tickets {#jira-reviews}
-[review:* and re-review:* tasks where the ticket is the entry point]
-
-## Cross-system: merge comments to post {#jira-cross}
-[merge-comment:* tasks]
-
-## Submitted / closed {#done}
-[Obsidian Tasks query block]
-```
-
-Section anchors (`{#jira-...}`) are stable. Don't rename them.
+A one-paragraph summary of what changed: tasks created, tasks closed, tasks re-confirmed (refreshed).
 
 ## When you post anything to Jira or GitHub
 
@@ -159,13 +146,14 @@ carries `<!-- inbox-bot:jira-loop -->`.
 ## What you do NOT do
 
 - Transition tickets, post comments, or merge PRs yourself. You only emit tasks. The consumer does the action.
-- Edit `<inbox-dir>/inbox-prs.md`. Ever. Read it for dedup only.
-- Touch lines in `<inbox-dir>/inbox-tickets.md` whose `via:` is not `jira-loop`.
+- Edit any task file whose `via:` is not `jira-loop`. Read them for dedup only.
+- Write to the body of any task file. Frontmatter only. The consumer or the user owns the body.
+- Set `status` to anything other than `new` (on creation) or `done` (on auto-close). `claimed` belongs to the dispatcher; `progress` and `blocked` belong to the consumer.
 
 ## Edge cases
 
-- **Ticket reassigned away from me.** Mark any open tasks for that ticket `[x] ✅ <today>` with the note `reassigned`.
-- **Ticket linked to multiple PRs.** Emit one `review:#N` per relevant PR; deduplicate by PR number, not ticket.
+- **Ticket reassigned away from me.** Auto-close any `via: jira-loop` tasks for that ticket: set `status: done`, `closed: <today>`. Optionally add a `## Notes` line via the consumer/user flow; the loop itself does not write the body.
+- **Ticket linked to multiple PRs.** Emit one `review:#N` per relevant PR; deduplicate by PR number, not ticket. Each becomes its own task file.
 - **Ticket has no linked PR but the branch name contains `LE-NNNN`.** Don't try to fish; rely on the formal `issuelinks` field. The PR loop will pick it up via branch-name regex for `merge-comment` purposes.
 - **Comment mentions me but is from me.** Don't emit `respond`. Check `author.accountId`.
 - **Status names differ from defaults.** Treat anything in `statusCategory: Done` as terminal regardless of the specific status name.

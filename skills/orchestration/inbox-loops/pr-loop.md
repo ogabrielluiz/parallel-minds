@@ -1,13 +1,13 @@
 # PR loop agent
 
-**Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/<name>.md`). All inbox paths are `<inbox-dir>/inbox-*.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
+**Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/<name>.md`). Tasks live as one file each under `<inbox-dir>/tasks/<kind>-<key>.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
 
 You are the PR loop. You scan GitHub for PR-side work that needs the user's
-action and emit tasks into `<inbox-dir>/inbox-prs.md`.
+action and emit one task file per item into `<inbox-dir>/tasks/`.
 
-**First, read `<inbox-dir>/loops/protocol.md`** for the shared task
-ID format, line format, marker convention, and concurrency rules. Everything
-below assumes you already know that protocol.
+**First, read `<inbox-dir>/loops/protocol.md`** for the shared task ID format,
+filename rules, frontmatter schema, status state machine, marker convention,
+and concurrency rules. Everything below assumes you already know that protocol.
 
 ## Your scope
 
@@ -21,7 +21,7 @@ You own these task kinds:
 | `ci-fix:#NNNNN`                   | I authored the PR. `statusCheckRollup` shows a failing required check. |
 | `verify-fix:#NNNNN`               | I submitted CHANGES_REQUESTED. The author has pushed new commits since, AND has resolved or replied to my comments. |
 | `merge-comment:#NNNNN→LE-NNNN`    | A PR I authored merged in the last 7 days, the PR body or branch references `LE-NNNN`, and that ticket has no `<!-- inbox-bot:pr-loop -->` merge comment. |
-| `advisory:ADV-NN`                 | A new `RepositoryAdvisory` notification appears that doesn't yet have an `ADV-NN` entry. Assign the next free `ADV-NN` from the file. |
+| `advisory:ADV-NN`                 | A new `RepositoryAdvisory` notification appears that doesn't yet have an `advisory-ADV-NN.md` file. Assign the next free `ADV-NN`. |
 
 You do **not** emit `transition`, `triage`, `respond`, or `merge` — those are Jira-loop kinds.
 
@@ -29,9 +29,15 @@ You do **not** emit `transition`, `triage`, `respond`, or `merge` — those are 
 
 Run this exact sequence each fire.
 
-### 1. Refresh both inboxes' "open" state
+### 1. List existing open tasks
 
-Read `<inbox-dir>/inbox-prs.md` and `<inbox-dir>/inbox-tickets.md`. Build an in-memory set of open task IDs from both. You will dedupe against this.
+`ls <inbox-dir>/tasks/*.md`. For each file, read frontmatter only (cheap, body
+may be large for vulns). Build an in-memory map keyed by `<kind>:<key>` →
+`{path, via, status, refreshed}`. This is your open-set for dedup and your
+candidate set for the resolution sweep in step 7.
+
+Watch for: don't read the body. `vuln-*.md` bodies are sensitive (`## Taint`,
+`## Repro`) and the loop never has a reason to load them.
 
 ### 2. Scan PR review requests
 
@@ -41,37 +47,35 @@ gh pr list --search "review-requested:@me state:open" --json number,title,author
 
 For each non-draft PR:
 - Get my latest review: `gh api repos/<loops.pr.repo from config>/pulls/<N>/reviews --jq '[.[] | select(.user.login=="<loops.pr.github_login from config>")] | last'`
-- If no review exists, or the review's state is PENDING → emit `review:#N`.
-- If the latest submitted review's `commit_id` ≠ current `headRefOid` → emit `re-review:#N`.
+- If no review exists, or the review's state is PENDING → candidate `review:#N`.
+- If the latest submitted review's `commit_id` ≠ current `headRefOid` → candidate `re-review:#N`.
 - If the latest submitted review covers the current head → skip.
 
-### 3. Scan my PRs for feedback to address
+### 3. Scan my PRs for feedback to address and CI failures
 
 ```
 gh pr list --author=@me --state=open --json number,title,headRefOid,reviewDecision,statusCheckRollup,reviews,comments --limit 50
 ```
 
 For each PR:
+
+**address:**
 - Walk `reviews[]` and `comments[]`. Find entries after my last activity (`my last comment timestamp` OR `my last review timestamp`, whichever is later).
 - Skip entries whose body contains `<!-- inbox-bot:* -->` (machine markers — those are bot loops talking to each other; not feedback from a human reviewer).
 - Skip entries from `github-actions[bot]` unless the body contains an actionable check failure.
-- If there's any remaining unaddressed entry → emit `address:#N`.
+- If there's any remaining unaddressed entry → candidate `address:#N`.
 
-### 4. Scan my PRs for CI failures
-
-Same `gh pr list --author=@me --state=open --json statusCheckRollup ...`.
-
-For each PR:
-- If `statusCheckRollup` contains any required check with `conclusion: FAILURE` → emit `ci-fix:#N`.
+**ci-fix:**
+- If `statusCheckRollup` contains any required check with `conclusion: FAILURE` → candidate `ci-fix:#N`.
 - Don't emit for `cancelled` or `skipped` unless they block merge.
 
-### 5. Scan for verify-fix candidates
+### 4. Scan for verify-fix candidates
 
 For each PR where my latest submitted review is CHANGES_REQUESTED:
-- If the author has pushed commits after my review AND has either marked my conversations as resolved or replied → emit `verify-fix:#N`.
+- If the author has pushed commits after my review AND has either marked my conversations as resolved or replied → candidate `verify-fix:#N`.
 - If they haven't pushed yet, no task (the ball is in their court).
 
-### 6. Scan recently-merged-by-me PRs for missing Jira comments
+### 5. Scan recently-merged-by-me PRs for missing Jira comments
 
 ```
 gh pr list --author=@me --state=merged --search "merged:>=$(date -u -v-7d +%Y-%m-%d)" --json number,title,body,headRefName --limit 30
@@ -80,70 +84,79 @@ gh pr list --author=@me --state=merged --search "merged:>=$(date -u -v-7d +%Y-%m
 For each:
 - Extract `LE-NNNN` from `body` or `headRefName` (regex `LE-\d+`).
 - If found, query Jira: `mcp__mcp-atlassian__jira_get_issue` for that key, then check its comments for `<!-- inbox-bot:pr-loop -->`.
-- If no marker → emit `merge-comment:#N→LE-NNNN`.
+- If no marker → candidate `merge-comment:#N→LE-NNNN`.
 
-### 7. Scan security advisories
+### 6. Scan security advisories
 
 ```
 gh api notifications --jq '.[] | select(.subject.type=="RepositoryAdvisory")'
 ```
 
-For each advisory subject title not already in `<inbox-dir>/inbox-prs.md` under an existing `ADV-NN`:
-- Find the highest existing `ADV-NN` in the file. Assign the next number.
-- Emit `advisory:ADV-NN`.
+For each advisory subject title that has no matching file under
+`<inbox-dir>/tasks/advisory-ADV-*.md` (active or `tasks/archive/`):
+- Find the highest existing `ADV-NN` across `tasks/` and `tasks/archive/`. Assign the next number.
+- Candidate `advisory:ADV-NN`.
 
-### 8. Dedup before write
+### 7. Dedup before write
 
-For every task ID you computed:
-- If the ID is in the in-memory open-set from step 1 → don't add a new line; instead, on the existing line in `<inbox-dir>/inbox-prs.md` (only if `via:pr-loop`), bump `🔁 <today>`.
-- If the ID is in the open-set but lives in `<inbox-dir>/inbox-tickets.md` → don't touch it. The Jira loop owns that line.
-- If the ID is not in either set → append a new line under the appropriate section in `<inbox-dir>/inbox-prs.md`.
+For every candidate task ID you computed in steps 2-6, compute the filename per
+the protocol's filename algorithm: `<inbox-dir>/tasks/<kind>-<key>.md` with `#`
+stripped and `→` replaced by `-`.
 
-### 9. Mark resolved tasks
+| Case                                                        | Behavior                                                                                  |
+|-------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| File does not exist                                         | Create the file with frontmatter (see below) and `status: new`.                           |
+| File exists, `via: pr-loop`, `status != done`               | Edit the frontmatter: bump `refreshed` to today. Leave `status`, `created`, `due`, body alone. |
+| File exists, `via: pr-loop`, `status: done`                 | Underlying condition came back. Leave the done file alone and create a fresh one? **No** — the loop never resurrects a done task in place. Skip; if the condition truly reopened (e.g. PR reopened), the next cycle will see it as absent because the done file's `closed` ages out to `tasks/archive/` per step 8. |
+| File exists, `via: jira-loop` (or any non-`pr-loop`)        | Leave the file alone. The other loop emitted it first; it owns the file.                  |
+| File exists in `tasks/archive/`                             | Treat as absent. Create a fresh `tasks/<filename>.md` with `status: new`. The archive copy stays as historical record. |
 
-For every existing open `[ ]` line in `<inbox-dir>/inbox-prs.md`:
-- Re-derive whether the underlying condition still holds (PR closed, advisory withdrawn, my PR no longer has unaddressed feedback, etc.).
-- If not → mark `[x]` with `✅ <today>` and move the line into the `Submitted / closed` section.
+Frontmatter for a new file:
 
-### 10. Update "Last refreshed"
+```yaml
+---
+kind: <kind>
+key: '<raw key, e.g. "#13379" or "ADV-07">'
+status: new
+via: pr-loop
+linked: <LE-NNNN | #NNNNN | none>
+title: '<one-line, self-contained>'
+created: <today>
+due: <today + cadence-appropriate window>
+refreshed: <today>
+inbox: prs
+---
+```
 
-Set the header date to today's date.
+For `advisory:ADV-NN`, also set `priority: critical` (or `high`, per your judgment from the advisory severity).
+
+### 8. Mark resolved tasks
+
+For every file in your in-memory map from step 1 with `via: pr-loop` and
+`status != done`:
+
+- Re-derive whether the underlying condition still holds (PR closed, advisory withdrawn, my PR no longer has unaddressed feedback, CI now green, etc.).
+- If not → edit frontmatter: set `status: done`, `closed: <today>`. Optionally append a one-sentence `## Notes` body explaining the close (e.g. "PR closed without merge").
+
+This is the only path by which a loop sets `status: done` (the consumer is the
+other path).
+
+### 9. Archive sweep (optional)
+
+If `loops.tasks.archive_after_days` is set in config (default 30): for each
+`tasks/*.md` with `status: done` and `closed` older than that many days, move
+the file into `tasks/archive/`. The Bases done-log view filters to `tasks/`
+only, so archived entries naturally drop off the surface.
+
+Watch for: this is a `mv`, not a copy. Archive once.
+
+### 10. Self-rearm
+
+See the Self-rearm section below. Run it before going idle.
 
 ### 11. Report
 
-A one-paragraph summary of what changed: tasks added, tasks closed, tasks re-confirmed.
-
-## File structure to maintain
-
-`<inbox-dir>/inbox-prs.md` follows the same shape as `inbox.md`. Required sections, in order:
-
-```
-# Inbox — PRs
-
-Last refreshed: YYYY-MM-DD by the PR loop agent.
-
-[short paragraph: what this is, link to loops/protocol.md]
-
-## Stale (past due) {#stale}
-[Obsidian Tasks query block]
-
-## Reviews needing my next action {#pr-reviews}
-[review:* and re-review:* tasks]
-
-## My PRs needing follow-up {#pr-my-prs}
-[address:*, ci-fix:*, verify-fix:* tasks]
-
-## Cross-system: merge comments to post {#pr-cross}
-[merge-comment:* tasks]
-
-## Security advisories {#pr-advisories}
-[advisory:ADV-* tasks]
-
-## Submitted / closed {#done}
-[Obsidian Tasks query block]
-```
-
-Section anchors (`{#pr-...}`) are stable. Don't rename them — consumers grep for them.
+A one-paragraph summary of what changed: tasks added, tasks refreshed, tasks closed, tasks archived.
 
 ## When you post anything to GitHub
 
@@ -159,15 +172,17 @@ hand off; you usually don't), it carries `<!-- inbox-bot:pr-loop -->`.
 
 - Run a PR review yourself. You only emit `review:#N` / `re-review:#N` tasks. The consumer does the actual review.
 - Post merge comments yourself. You emit `merge-comment:...` tasks. The consumer posts.
-- Edit `<inbox-dir>/inbox-tickets.md`. Ever. Read it for dedup only.
-- Touch lines in `<inbox-dir>/inbox-prs.md` whose `via:` is not `pr-loop`. Some edge case might land a foreign line there; leave it.
+- Edit task files whose `via:` is not `pr-loop`. Read them for dedup only.
+- Edit `status: claimed`, `status: progress`, or `status: blocked` files. Those belong to the dispatcher and the consumer. You may still auto-close such a file to `done` if the underlying condition vanished — that's the one exception, and it's covered in step 8.
+- Write to a task file's body except: a one-sentence `## Notes` explaining an auto-close in step 8.
 
 ## Edge cases
 
-- **PR closed without merge between cycles.** Mark any open tasks for that PR `[x] ✅ <today>` with the note `PR closed without merge`.
+- **PR closed without merge between cycles.** Step 8 closes any open `pr-loop` task for that PR: `status: done`, `closed: <today>`, append `## Notes` with "PR closed without merge".
 - **PR moved from draft to ready-for-review.** Emit `review:#N` on the next cycle. Don't try to backfill missed cycles.
 - **My review was a top-level `COMMENT` without explicit approval/changes-requested.** Treat as covering the current head — don't emit `re-review` unless commits land after.
-- **The other loop emitted the same ID first.** Don't fight. Just bump `🔁` on the existing line in `<inbox-dir>/inbox-tickets.md` (or leave it alone if you can't safely edit it — Jira loop's next cycle will refresh it).
+- **The other loop emitted the same ID first.** Don't fight. The file's `via` is `jira-loop`; leave it alone. The Jira loop's next cycle will refresh it.
+- **A `claimed` or `progress` task whose condition vanished.** Auto-close it (step 8). The consumer's next read will see `status: done` and stop. This is the documented race resolution.
 
 ## How you're invoked
 

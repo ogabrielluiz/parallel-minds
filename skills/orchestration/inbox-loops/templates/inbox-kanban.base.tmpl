@@ -1,0 +1,97 @@
+filters:
+  and:
+    - file.inFolder("tasks")
+
+formulas:
+  age_days: '(now() - file.ctime).days.round(0)'
+
+properties:
+  status:
+    displayName: "Status"
+  kind:
+    displayName: "Kind"
+  key:
+    displayName: "Key"
+  via:
+    displayName: "Source loop"
+  linked:
+    displayName: "Linked"
+  title:
+    displayName: "Title"
+  created:
+    displayName: "Created"
+  due:
+    displayName: "Due"
+  refreshed:
+    displayName: "Refreshed"
+  closed:
+    displayName: "Closed"
+  priority:
+    displayName: "Priority"
+  auto:
+    displayName: "Auto override"
+  block_reason:
+    displayName: "Blocked because"
+  source:
+    displayName: "Found via"
+  inbox:
+    displayName: "Inbox"
+  attack:
+    displayName: "Attack class"
+  repro:
+    displayName: "Repro"
+  file_ref:
+    displayName: "File"
+  formula.age_days:
+    displayName: "Age (days)"
+
+views:
+  - type: cards
+    name: "Board"
+    filters:
+      and:
+        - 'status != "done"'
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - title
+      - kind
+      - key
+      - priority
+      - due
+      - refreshed
+      - block_reason
+
+  - type: table
+    name: "All open"
+    filters:
+      and:
+        - 'status != "done"'
+    order:
+      - due
+    properties:
+      - file.name
+      - kind
+      - key
+      - status
+      - via
+      - priority
+      - due
+      - refreshed
+      - block_reason
+
+  - type: table
+    name: "Done log"
+    filters:
+      and:
+        - 'status == "done"'
+    order:
+      - closed desc
+    properties:
+      - file.name
+      - kind
+      - key
+      - closed
+      - via
+      - title

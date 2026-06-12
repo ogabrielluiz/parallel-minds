@@ -1,37 +1,60 @@
 # Consumer agent
 
-**Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/<name>.md`). All inbox paths are `<inbox-dir>/inbox-*.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
+**Config.** Read `<inbox-dir>/config.yaml`. `<inbox-dir>` is the directory this file lives one level under (this file is at `<inbox-dir>/loops/<name>.md`). All task files live at `<inbox-dir>/tasks/<kind>-<key>.md`. Read your loop's block under `loops:` for cadence and per-loop settings. Never hardcode paths.
 
 You are a consumer of the inbox queue. You pick up a task that a loop
 emitted, do the work the task describes, and mark the task done.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared
-task ID format, line format, marker convention, and concurrency rules.
+task ID format, filename rules, frontmatter schema, status state machine,
+marker convention, and concurrency rules.
 
 ## How you're dispatched
 
-The user (or another orchestrator) points you at one of:
+The user (or another orchestrator) points you at a specific task file:
 
-1. **A specific task ID** — "go to `<inbox-dir>/inbox-prs.md`, do `review:#13469`"
-2. **A whole section** — "work through `#pr-advisories` in `<inbox-dir>/inbox-prs.md`"
-3. **The next stale item** — "do the first `[ ]` line under `#stale`"
+> "do `<inbox-dir>/tasks/review-13469.md`"
 
-Whichever shape: the line is self-contained. You don't need to read any
-ledger history. If the line is missing context, that's a bug in the loop
+Or, equivalently, at the task ID `review:#13469` plus the inbox-dir — you
+resolve the filename per the protocol's filename rules and open the file.
+
+The frontmatter is self-contained. You don't need to read any ledger
+history. If the frontmatter is missing context, that's a bug in the loop
 that wrote it — flag it and stop, don't guess.
 
 ## Per-task procedure
 
 ### 1. Find the task
 
-- For a specific ID: `grep -n '^- \[ \] <kind>:<key>' <inbox-dir>/inbox-*.md`. The line should appear in exactly one file. If it's missing, it was already closed or it never existed; tell the user.
-- For a section: read the file, scan only the section with the matching `{#anchor}`.
-- For "next stale": read both inboxes, find lines under `## Stale ... {#stale}`.
+```
+ls <inbox-dir>/tasks/<kind>-<key>.md
+```
 
-### 2. Decide whether you can do it
+Read the file. Parse the frontmatter. The `kind` field tells you which
+row of the action table below applies. If the file is missing, the task
+was already closed (archived) or never existed; tell the user.
 
-Each kind has a default action. If the task line says something more specific
-("blocker only: pip-in-venv path") follow the line.
+### 2. Flip to `status: progress`
+
+Before touching any external system, edit the frontmatter to claim the
+task as in-flight. Use `Edit` with a tight `old_string` matching only the
+status line:
+
+- `old_string`: `status: claimed` (or `status: new` if the user dispatched manually)
+- `new_string`: `status: progress`
+
+Also bump `refreshed:` to today in the same edit pass if you can match it
+uniquely; otherwise do it as a second tight edit.
+
+Watch for: do this BEFORE any GitHub/Jira/Slack call. If the external
+step crashes, the file already says `progress` and the dispatcher's
+stuck-claim sweep will recover it.
+
+### 3. Decide whether you can do it
+
+Each kind has a default action. If the task's `title` or `## Notes` body
+says something more specific ("blocker only: pip-in-venv path") follow
+that.
 
 | Kind                              | What "done" looks like                                                                                  |
 |-----------------------------------|---------------------------------------------------------------------------------------------------------|
@@ -46,38 +69,20 @@ Each kind has a default action. If the task line says something more specific
 | `respond:LE-NNNN`                 | Reply to the @-mention. Each reply you author starts with `<!-- inbox-bot:jira-loop -->`.               |
 | `merge:LE-NNNN`                   | Merge the linked PR (after final checks). If you're unsure about the merge strategy, ask the user.      |
 | `advisory:ADV-NN`                 | Triage the advisory: confirm reproducibility, propose patch + disclosure timeline, file the patch on a branch. Don't open the PR or publish the advisory without the user's go-ahead. |
-| `vuln:VULN-NN`                    | Triage a vuln candidate found by the vuln-hunt loop. Read the entry's `taint:` and `repro:` sub-lines. Reproduce locally (no network exploits — code-level repro only). If real → file a draft patch on a local branch, mark `[x] ✅ <today> (branch: <name>)`, do NOT push or open a PR. If not real → mark `[x] ✅ <today> (false positive: <one-line reason>)`. **Treat vuln entries as sensitive — don't paste contents into GitHub, Jira, Slack, or any other surface.** |
+| `vuln:VULN-NN`                    | Triage a vuln candidate found by the vuln-hunt loop. Read the file's `## Taint` and `## Repro` body sections. Reproduce locally (no network exploits — code-level repro only). If real → file a draft patch on a local branch, close with `status: done` and a `## Notes` line `branch: <name>`, do NOT push or open a PR. If not real → close with `status: done` and a `## Notes` line `false positive: <one-line reason>`. **Treat vuln files as sensitive — don't paste any frontmatter or body content into GitHub, Jira, Slack, or any other surface.** |
 
 If you don't know how to do the action, ask the user — don't invent it.
 
-### 3. Do the work
+### 4. Do the work
 
 Follow the kind-specific action above. Any comment you author on behalf of a
 loop-emitted task must start with the appropriate marker:
 
-- Tasks from the PR loop (`via:pr-loop`): `<!-- inbox-bot:pr-loop -->`
-- Tasks from the Jira loop (`via:jira-loop`): `<!-- inbox-bot:jira-loop -->`
+- Tasks where `via: pr-loop`: `<!-- inbox-bot:pr-loop -->`
+- Tasks where `via: jira-loop`: `<!-- inbox-bot:jira-loop -->`
 
 The marker is what keeps the two loops from triggering each other into a
 cycle. **Don't skip it.**
-
-### 4. Close the task
-
-Re-read the file (so you don't clobber concurrent edits). Then:
-
-1. Change `- [ ]` to `- [x]`.
-2. Append ` ✅ <YYYY-MM-DD>` after the existing date emojis.
-3. Move the entire line from its current section to `## Submitted / closed {#done}`.
-
-Use `Edit` with a tight `old_string` (the full task line) and `replace_all: false`.
-
-If the task line says something is unaddressable ("PR was closed without
-merge", "ticket reassigned", "advisory withdrawn"), still mark `[x]` and
-add a short reason after `✅ <date>`, e.g.:
-
-```
-- [x] review:#13329 — fix: use langchain-mongodb. via:jira-loop linked:LE-1408 ➕ 2026-05-25 📅 2026-05-26 ✅ 2026-06-01 (PR merged by author without my review)
-```
 
 ### 5. Side-effects across systems
 
@@ -85,26 +90,66 @@ Some kinds explicitly cross systems (`merge-comment`, `transition`,
 `verify-fix` posting APPROVED, etc.). For those:
 
 - Carry the right marker so the *other* loop ignores the comment.
-- Do the comment/transition BEFORE you mark `[x]` — if the cross-system step
-  fails, you want the task to stay open so the next consumer retries.
+- Do the comment/transition BEFORE you flip the file to `status: done` —
+  if the cross-system step fails, you want the task to stay
+  `status: progress` (or move to `blocked`) so the next consumer retries.
 
-### 6. Report
+### 6. Close the task
 
-A two-line summary back to the user: which task, what you did, what's left
-(if any). If you only got partway, leave the task `[ ]` and add a short
-note to the line about progress so the next consumer doesn't restart.
+Re-read the file (so you don't clobber concurrent edits). Then edit the
+frontmatter:
+
+- `status: progress` → `status: done`
+- Add (or set) `closed: <YYYY-MM-DD>` (today).
+
+Use `Edit` with a tight `old_string` per line and `replace_all: false`.
+
+Optionally append a `## Notes` body section with one short sentence on
+the outcome if it needs context — for vuln triage results, for closures
+that weren't a normal success ("PR was closed without merge", "ticket
+reassigned", "advisory withdrawn"), or for the branch name on a
+`vuln:` real-positive close.
+
+Example body addition:
+
+```
+## Notes
+
+PR merged by author without my review.
+```
+
+Do NOT move the file. The dispatcher's archive sweep relocates
+`status: done` files to `tasks/archive/` once they're old enough.
+
+### 7. Blocked path
+
+If you hit a step that needs the user and can't proceed:
+
+- `status: progress` → `status: blocked`
+- Add `block_reason: <one-sentence reason>` to the frontmatter.
+
+Then stop and report. Do not mark the task done.
+
+### 8. Report
+
+A two-line summary back to the user: which task, what you did, what's
+left (if any). If you only got partway, leave the file at `status: progress`
+or `status: blocked` (with `block_reason`) and add a short `## Notes` line
+about progress so the next consumer doesn't restart.
 
 ## Concurrency caveats
 
-- **Don't edit lines you don't own.** If two consumers are dispatched at the
-  same time onto different tasks in the same file, work only your line. The
+- **Don't edit files you don't own.** If two consumers are dispatched at
+  the same time onto different tasks, each works only its own file. The
   `Edit` tool's exact-match guard catches some races; refresh-then-edit
   catches the rest.
-- **The loops may run while you work.** They never touch `[ ]` lines they
-  don't own, but they may rewrite `🔁` dates or move a line to `[x]` if the
-  underlying condition vanished (PR closed, advisory withdrawn). If your
-  target line disappears, re-read the file and decide: either it's already
-  resolved (your work is moot), or there's a real conflict — tell the user.
+- **The loops may run while you work.** They only edit files where
+  `via:` matches their own loop identifier, and they only touch loop-owned
+  fields (`refreshed`, occasionally `due`, and `status: new → done` on
+  auto-close when the underlying condition vanished). If your target file
+  disappears or flips to `status: done` under you, re-read and decide:
+  either it's already resolved (your work is moot), or there's a real
+  conflict — tell the user.
 
 ## What you do NOT do
 
@@ -116,9 +161,14 @@ note to the line about progress so the next consumer doesn't restart.
 - Run live exploits against any langflow instance — your repro is
   code-level (a unit test, a function-call trace, a synthetic flow JSON).
   Not curl-against-prod, not curl-against-dev-running-on-localhost.
-- Paste any line from `<inbox-dir>/inbox-vulns.md` into GitHub, Jira, Slack, email, a
-  public gist, or any other surface. The file is local for a reason.
-- Edit `<inbox-dir>/inbox-*.md` lines you didn't claim.
+- Paste any frontmatter or body content from a `tasks/vuln-*.md` file
+  into GitHub, Jira, Slack, email, a public gist, or any other surface.
+  The file is local for a reason.
+- Edit task files you didn't claim.
+- Set `status: new` or `status: claimed` — those belong to the loop and
+  the dispatcher respectively.
+- Edit loop-owned frontmatter fields (`kind`, `key`, `via`, `linked`,
+  `title`, `created`, `due`, `inbox`, `source`, `priority`, `auto`).
 - Add new task kinds. If the work doesn't fit an existing kind, ask
   the user to add one in `<inbox-dir>/loops/protocol.md` (and the relevant loop doc).
 - Skip the marker. Ever.
@@ -126,12 +176,22 @@ note to the line about progress so the next consumer doesn't restart.
 ## Quick reference — finding a task
 
 ```bash
-# Specific ID
-grep -n '^- \[ \] review:#13469' <inbox-dir>/inbox-*.md
+# Specific task by ID
+ls <inbox-dir>/tasks/<kind>-<key>.md
+# e.g. ls <inbox-dir>/tasks/review-13469.md
+#      ls <inbox-dir>/tasks/transition-LE-1416.md
+#      ls <inbox-dir>/tasks/merge-comment-13294-LE-1416.md
 
-# Whole section in a file
-sed -n '/{#pr-advisories}/,/^## /p' <inbox-dir>/inbox-prs.md
+# All open tasks
+grep -lE '^status: (new|claimed|progress|blocked)$' <inbox-dir>/tasks/*.md
 
-# All open tasks across both files
-grep -h '^- \[ \] ' <inbox-dir>/inbox-*.md
+# All tasks of a given kind
+ls <inbox-dir>/tasks/<kind>-*.md
+
+# All tasks from one loop
+grep -l '^via: pr-loop$' <inbox-dir>/tasks/*.md
 ```
+
+The Bases file `<inbox-dir>/inbox-kanban.base` renders the same view in
+Obsidian (Board / All open / Done log). The CLI commands above are for
+agent use.
