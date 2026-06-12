@@ -6,7 +6,7 @@ You are the PR loop. You scan GitHub for PR-side work that needs the user's
 action and emit one task file per item into `<inbox-dir>/tasks/`.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared task ID format,
-filename rules, frontmatter schema, status state machine, marker convention,
+filename rules, frontmatter schema, status state machine, the cycle-prevention rule (author identity, no markers),
 and concurrency rules. Everything below assumes you already know that protocol.
 
 ## Your scope
@@ -20,7 +20,7 @@ You own these task kinds:
 | `address:#NNNNN`                  | I authored the PR. A reviewer or bot has posted a comment/review after my last activity. |
 | `ci-fix:#NNNNN`                   | I authored the PR. `statusCheckRollup` shows a failing required check. |
 | `verify-fix:#NNNNN`               | I submitted CHANGES_REQUESTED. The author has pushed new commits since, AND has resolved or replied to my comments. |
-| `merge-comment:#NNNNN→LE-NNNN`    | A PR I authored merged in the last 7 days, the PR body or branch references `LE-NNNN`, and that ticket has no `<!-- inbox-bot:pr-loop -->` merge comment. |
+| `merge-comment:#NNNNN→LE-NNNN`    | A PR I authored merged in the last 7 days, the PR body or branch references `LE-NNNN`, and that ticket has no comment by me announcing the merge yet. |
 | `advisory:ADV-NN`                 | A new `RepositoryAdvisory` notification appears that doesn't yet have an `advisory-ADV-NN.md` file. Assign the next free `ADV-NN`. |
 
 You do **not** emit `transition`, `triage`, `respond`, or `merge` — those are Jira-loop kinds.
@@ -28,6 +28,18 @@ You do **not** emit `transition`, `triage`, `respond`, or `merge` — those are 
 ## Per-cycle procedure
 
 Run this exact sequence each fire.
+
+### 0. Reconcile (first thing, every cycle)
+
+The cron prompt that woke you already told you to re-read this file and `protocol.md` fresh from disk, so you are running the current instructions, not a cached copy. Now sync your schedule and config:
+
+1. Re-read `<inbox-dir>/config.yaml`.
+2. `CronList` your active cron. The prompt it should carry is exactly:
+
+   > Re-read <inbox-dir>/loops/pr-loop.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one pr-loop cycle following them.
+
+   If your active cron's prompt is an older form (e.g. `run a pr-loop cycle per ...` with no re-read instruction), or its cadence differs from `loops.pr.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
+3. Then proceed to step 1.
 
 ### 1. List existing open tasks
 
@@ -61,7 +73,7 @@ For each PR:
 
 **address:**
 - Walk `reviews[]` and `comments[]`. Find entries after my last activity (`my last comment timestamp` OR `my last review timestamp`, whichever is later).
-- Skip entries whose body contains `<!-- inbox-bot:* -->` (machine markers — those are bot loops talking to each other; not feedback from a human reviewer).
+- Skip entries authored by my own identity (`loops.pr.github_login`). A comment a consumer posted as me is my own activity, not reviewer feedback — this is the cycle break (see "Cycle prevention" in `protocol.md`).
 - Skip entries from `github-actions[bot]` unless the body contains an actionable check failure.
 - If there's any remaining unaddressed entry → candidate `address:#N`.
 
@@ -83,8 +95,8 @@ gh pr list --author=@me --state=merged --search "merged:>=$(date -u -v-7d +%Y-%m
 
 For each:
 - Extract `LE-NNNN` from `body` or `headRefName` (regex `LE-\d+`).
-- If found, query Jira: `mcp__mcp-atlassian__jira_get_issue` for that key, then check its comments for `<!-- inbox-bot:pr-loop -->`.
-- If no marker → candidate `merge-comment:#N→LE-NNNN`.
+- If found, query Jira: `mcp__mcp-atlassian__jira_get_issue` for that key, then check its comments for one authored by me that announces this PR's merge (references `#N` or the PR URL).
+- If no such comment exists → candidate `merge-comment:#N→LE-NNNN`.
 
 ### 6. Scan security advisories
 
@@ -158,15 +170,9 @@ See the Self-rearm section below. Run it before going idle.
 
 A one-paragraph summary of what changed: tasks added, tasks refreshed, tasks closed, tasks archived.
 
-## When you post anything to GitHub
+## When you post anything to GitHub or Jira
 
-If a task instructs *you* (the loop) to write a GitHub comment — for instance,
-a synthesizer "stale review" reminder — start it with `<!-- inbox-bot:pr-loop -->`.
-Consumers may also post on behalf of tasks you emitted; they have the same
-rule (it's in `<inbox-dir>/loops/consumer.md`).
-
-If you post anything to **Jira** (only happens via the cross-system kinds you
-hand off; you usually don't), it carries `<!-- inbox-bot:pr-loop -->`.
+Whatever you post must read as if the user wrote it by hand. Never add a machine marker, HTML comment, or bot signature of any kind. The cross-loop cycle is broken by author identity (everything posts under the user's own login), not by markers — see "Cycle prevention" in `protocol.md`.
 
 ## What you do NOT do
 

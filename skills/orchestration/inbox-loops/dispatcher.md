@@ -32,7 +32,7 @@ Defaults are conservative. When in doubt, escalate, don't auto.
 | `review:#NNNNN`                   | auto      | Consumer runs `pr-review` skill and leaves a PENDING review. The user still submits.   |
 | `re-review:#NNNNN`                | auto      | Same.                                                                                    |
 | `triage:LE-NNNN`                  | auto      | Consumer reads the ticket and writes a starter comment / plan.                          |
-| `merge-comment:#NNNNN→LE-NNNN`    | auto      | Bot-to-bot. Marker-tagged. Zero human stake.                                            |
+| `merge-comment:#NNNNN→LE-NNNN`    | auto      | Cross-system note posted as the user. Zero human stake.                                            |
 | `transition:LE-NNNN`              | auto, with caveat | Auto for transitions to non-terminal statuses. Escalate transitions to `Done` on tickets labeled `release-*` or priority `Critical`. |
 | `respond:LE-NNNN`                 | **both**  | Consumer drafts the reply; push so the user can review and post.                        |
 | `address:#NNNNN`                  | **both**  | Consumer reads the comment + drafts a reply; push so the user decides.                  |
@@ -60,6 +60,18 @@ You may also layer additional routing overrides via `loops.dispatcher.routing_ov
 - **In-flight tracking is via the `status` field on disk, not in your memory.** Consumer subagents update `status: progress` then `status: done` (or `blocked`) on their own. The next cycle re-reads `tasks/`; tasks the consumer closed during the previous cycle have `status: done` and are filtered out.
 
 ## Per-cycle procedure
+
+### 0. Reconcile (first thing, every cycle)
+
+The cron prompt that woke you already told you to re-read this file and `protocol.md` fresh from disk, so you are running the current instructions, not a cached copy. Now sync your schedule and config:
+
+1. Re-read `<inbox-dir>/config.yaml`.
+2. `CronList` your active cron. The prompt it should carry is exactly:
+
+   > Re-read <inbox-dir>/loops/dispatcher.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one dispatcher cycle following them.
+
+   If your active cron's prompt is an older form (e.g. `run a dispatcher cycle per ...` with no re-read instruction), or its cadence differs from `loops.dispatcher.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
+3. Then proceed to step 1.
 
 ### 1. Scan `tasks/`
 

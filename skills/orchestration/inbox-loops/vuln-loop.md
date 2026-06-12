@@ -8,7 +8,7 @@ on the live repo. You file candidates as `<inbox-dir>/tasks/vuln-VULN-NN.md`
 files for a human or consumer agent to triage.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared task ID
-format, frontmatter schema, status state machine, marker convention, and
+format, frontmatter schema, status state machine, the cycle-prevention rule (author identity, no markers), and
 concurrency rules.
 
 ## You are looking for, not at
@@ -95,6 +95,18 @@ The cycle as a whole should take 20-40 minutes of agent work; if you find
 yourself spending much longer on a single candidate, emit it with the data
 you have (`status: new`, `repro: high`) and move on. Consumer or user
 triages.
+
+### 0. Reconcile (first thing, every cycle)
+
+The cron prompt that woke you already told you to re-read this file and `protocol.md` fresh from disk, so you are running the current instructions, not a cached copy. Now sync your schedule and config:
+
+1. Re-read `<inbox-dir>/config.yaml`.
+2. `CronList` your active cron. The prompt it should carry is exactly:
+
+   > Re-read <inbox-dir>/loops/vuln-loop.md and <inbox-dir>/loops/protocol.md fresh from disk, then run one vuln-loop cycle following them.
+
+   If your active cron's prompt is an older form (e.g. `run a vuln-loop cycle per ...` with no re-read instruction), or its cadence differs from `loops.vuln.cadence` in config, `CronDelete` it and `CronCreate` a fresh one with the config cadence and the prompt above. This is how the loop self-updates after a doc or config change, with no restart.
+3. Then proceed to step 1.
 
 ### 1. Refresh state
 
@@ -258,12 +270,9 @@ are local-only. Disclosure runs through the user.
 
 Watch for: dedup must never read the body of a vuln task. Only frontmatter. The `## Taint` content is sensitive; the dedup path only checks filename existence.
 
-## Marker
+## You never post anywhere
 
-You never post comments anywhere. If a downstream consumer decides to file
-a draft advisory based on your candidate, they prefix the GitHub advisory
-body with `<!-- inbox-bot:vuln-loop -->` so the PR loop ignores it during
-its advisory triage scan.
+This loop only writes local task files. It never posts a comment, review, advisory, or anything else to GitHub, Jira, or Slack. If a downstream consumer or the user later files a draft advisory from one of your candidates, that's their action and it carries no machine marker — every post in this system reads as if the user wrote it by hand.
 
 ## What you do NOT do
 

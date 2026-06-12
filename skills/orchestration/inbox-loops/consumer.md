@@ -7,7 +7,7 @@ emitted, do the work the task describes, and mark the task done.
 
 **First, read `<inbox-dir>/loops/protocol.md`** for the shared
 task ID format, filename rules, frontmatter schema, status state machine,
-marker convention, and concurrency rules.
+the cycle-prevention rule (author identity, no markers), and concurrency rules.
 
 ## How you're dispatched
 
@@ -60,13 +60,13 @@ that.
 |-----------------------------------|---------------------------------------------------------------------------------------------------------|
 | `review:#NNNNN`                   | Run the `pr-review` skill on the PR. Post a PENDING review. Don't submit it — that's the user's call.  |
 | `re-review:#NNNNN`                | Same as `review`, but the prior review's findings may already be partly resolved by the new commits.    |
-| `address:#NNNNN`                  | Read the reviewer/bot comments, decide on each, post a reply or push a fix. Each reply carries `<!-- inbox-bot:pr-loop -->` if you authored it as the bot. Don't push to the user's branch without permission. |
+| `address:#NNNNN`                  | Read the reviewer/bot comments, decide on each, post a reply or push a fix. Don't push to the user's branch without permission. |
 | `ci-fix:#NNNNN`                   | Investigate the failing check, propose a fix locally, present to the user for go/no-go.                 |
-| `verify-fix:#NNNNN`               | Check that the author addressed each finding from the requested-changes review. If yes, post APPROVED (carries `<!-- inbox-bot:pr-loop -->`). If no, post a reply pointing at the still-broken finding. |
-| `merge-comment:#NNNNN→LE-NNNN`    | Post a comment on the linked Jira ticket starting with `<!-- inbox-bot:pr-loop -->`, summarizing the merge (PR title, merge SHA, brief impact). Do NOT transition the ticket — that's `transition:`. |
+| `verify-fix:#NNNNN`               | Check that the author addressed each finding from the requested-changes review. If yes, post APPROVED. If no, post a reply pointing at the still-broken finding. |
+| `merge-comment:#NNNNN→LE-NNNN`    | Post a comment on the linked Jira ticket summarizing the merge (PR title, merge SHA, brief impact). Do NOT transition the ticket — that's `transition:`. |
 | `transition:LE-NNNN`              | Move the ticket to the right status. Default target: Done. Confirm with the user if the ticket has open subtasks or a non-trivial workflow.                                                                          |
-| `triage:LE-NNNN`                  | Read the ticket. Either write an initial plan/comment, push it back with questions, or split into subtasks. Bot comments carry `<!-- inbox-bot:jira-loop -->`.                                                         |
-| `respond:LE-NNNN`                 | Reply to the @-mention. Each reply you author starts with `<!-- inbox-bot:jira-loop -->`.               |
+| `triage:LE-NNNN`                  | Read the ticket. Either write an initial plan/comment, push it back with questions, or split into subtasks.                                                         |
+| `respond:LE-NNNN`                 | Reply to the @-mention.                                                                                  |
 | `merge:LE-NNNN`                   | Merge the linked PR (after final checks). If you're unsure about the merge strategy, ask the user.      |
 | `advisory:ADV-NN`                 | Triage the advisory: confirm reproducibility, propose patch + disclosure timeline, file the patch on a branch. Don't open the PR or publish the advisory without the user's go-ahead. |
 | `vuln:VULN-NN`                    | Triage a vuln candidate found by the vuln-hunt loop. Read the file's `## Taint` and `## Repro` body sections. Reproduce locally (no network exploits — code-level repro only). If real → file a draft patch on a local branch, close with `status: done` and a `## Notes` line `branch: <name>`, do NOT push or open a PR. If not real → close with `status: done` and a `## Notes` line `false positive: <one-line reason>`. **Treat vuln files as sensitive — don't paste any frontmatter or body content into GitHub, Jira, Slack, or any other surface.** |
@@ -75,21 +75,16 @@ If you don't know how to do the action, ask the user — don't invent it.
 
 ### 4. Do the work
 
-Follow the kind-specific action above. Any comment you author on behalf of a
-loop-emitted task must start with the appropriate marker:
+Follow the kind-specific action above. Everything you post — every comment, review, or reply — must read as if the user wrote it by hand. **Never add a machine marker, HTML comment, bot signature, or "posted by" footer of any kind.** It all goes out under the user's own identity.
 
-- Tasks where `via: pr-loop`: `<!-- inbox-bot:pr-loop -->`
-- Tasks where `via: jira-loop`: `<!-- inbox-bot:jira-loop -->`
-
-The marker is what keeps the two loops from triggering each other into a
-cycle. **Don't skip it.**
+The two loops don't trigger each other because every post is authored by the user, and the loops skip comments authored by the user when scanning for new activity (see "Cycle prevention" in `protocol.md`). Author identity is the cycle break — not a marker.
 
 ### 5. Side-effects across systems
 
 Some kinds explicitly cross systems (`merge-comment`, `transition`,
 `verify-fix` posting APPROVED, etc.). For those:
 
-- Carry the right marker so the *other* loop ignores the comment.
+- Post under the user's own account; the *other* loop ignores it by author identity, not a marker.
 - Do the comment/transition BEFORE you flip the file to `status: done` —
   if the cross-system step fails, you want the task to stay
   `status: progress` (or move to `blocked`) so the next consumer retries.
