@@ -15,7 +15,8 @@ You own these task kinds:
 | Kind                              | When you emit it                                            |
 |-----------------------------------|-------------------------------------------------------------|
 | `triage:LE-NNNN`                  | A ticket newly assigned to me sits in `To Do` and hasn't been touched by me. |
-| `respond:LE-NNNN`                 | A ticket has a comment mentioning me, authored by someone other than me, after my last activity. |
+| `respond:LE-NNNN`                 | A ticket that's mine (I'm assignee or reporter) **or** that @-mentions me has a new comment authored by someone other than me, after my last activity. Every such comment counts — they may be asking a question or have forgotten to tag me. |
+| `activity:LE-NNNN`                | An issue in my involvement set that isn't mine to answer has new activity I should be aware of: a child created or moved under an epic I own, a ticket I created getting reassigned or changing status, or a comment on a ticket I only watch. Awareness, not a reply. |
 | `merge:LE-NNNN`                   | A ticket assigned to me is in status `Ready to Merge` and its linked PR is open. |
 | `transition:LE-NNNN`              | A ticket assigned to me has a linked PR that has merged, but the ticket status is not Done. |
 | `review:#NNNNN`                   | A ticket assigned to me references PR `#NNNNN`, that PR has `review-requested:@me`, and I have no submitted review on the current head. (Same task ID as the PR loop's `review` — dedup handles it.) |
@@ -75,20 +76,42 @@ For each ticket, derive candidate task IDs:
   - No review or pending → candidate `review:#NNNNN` with `linked: LE-NNNN`.
   - Review exists but head has moved → candidate `re-review:#NNNNN` with `linked: LE-NNNN`.
 
-### 3. Scan comments mentioning me on tickets I don't own
+### 3. Scan my involvement set for new activity
+
+This is the "mirror my Jira notification surface into local tasks" scan. Anything I'd get a Jira notification about — a comment on a ticket that's mine, a child appearing under an epic I own, a ticket I created changing hands — should land as a task.
+
+Build the involvement set in one query:
 
 ```
 mcp__mcp-atlassian__jira_search
-  jql: (comment ~ currentUser() OR assignee was currentUser()) AND updated >= -7d
-  fields: summary,status,updated
-  limit: 50
+  jql: (assignee = currentUser() OR reporter = currentUser() OR watcher = currentUser() OR "Epic Link" in (<loops.jira.owned_epics>)) AND updated >= -7d ORDER BY updated DESC
+  fields: summary,status,priority,issuetype,reporter,assignee,updated,issuelinks,comment
+  limit: 100
 ```
 
-For each ticket from the result that I do not currently own:
-- Fetch comments via `mcp__mcp-atlassian__jira_get_issue` with `comment_limit` high enough.
-- Find comments after my last comment on the issue (or after my last assignment-from event if I was assigned).
-- Skip any comment authored by my own Jira account. A comment a consumer posted as me is my own activity, not someone else asking for a reply — this is the cycle break (see "Cycle prevention" in `protocol.md`).
-- If a remaining comment @-mentions me by name or accountId → candidate `respond:LE-NNNN`.
+- Read `loops.jira.owned_epics` from config for the epic keys. If it's empty or unset, drop the `"Epic Link" in (...)` clause entirely.
+- `"Epic Link"` is the company-managed field name. If the project is team-managed, children hang off `parent in (<owned_epics>)` instead — use whichever the project actually uses (a `parent` clause for team-managed, `"Epic Link"` for company-managed). One of them will return children; the other errors or returns nothing.
+- The `-7d` window plus filename dedup (step 5) keeps this from backfilling old issues: only recently-touched issues appear, and anything already emitted just bumps `refreshed`.
+
+For each issue, look at what's new since I last saw it (use the matching task's `refreshed` if one exists, else the `-7d` window). Classify:
+
+**a. New comment by someone other than me.** Fetch comments via `mcp__mcp-atlassian__jira_get_issue` if the search payload didn't include enough.
+- Skip any comment authored by my own Jira account. A comment a consumer posted as me is my own activity, not someone asking for a reply — this is the cycle break (see "Cycle prevention" in `protocol.md`).
+- If the issue is **mine** (I'm assignee or reporter) OR the comment @-mentions me → candidate `respond:LE-NNNN`. Every such comment, not only @-mentions — someone may be asking a question or have forgotten to tag me.
+- Otherwise (a ticket I only watch, or an epic child that isn't mine) → candidate `activity:LE-NNNN`. A comment I should see but that isn't necessarily mine to answer.
+
+**b. New non-comment activity** (the awareness cases) → candidate `activity:LE-NNNN`:
+- A child issue newly created under an owned epic (it's in the set, has no existing task, and isn't assigned to me). Title: `"<reporter> created <KEY> under <epic>: <summary>"`.
+- A ticket I created (reporter = me) that got reassigned away, or changed status. Title names the change.
+- Any other status change on an involvement issue I'm not the assignee of.
+
+Set `priority: high` on the **high-signal slice** so the dispatcher escalates it (everything else is board-only):
+- a child of an owned epic reaching `Ready to Merge`, or
+- a ticket I created (reporter = me) reaching a terminal status.
+
+Leave `priority` unset on routine awareness items.
+
+Watch for: never auto-act on these — `activity` exists so I (or a consumer I explicitly point at it) handle it later. The dispatcher never auto-dispatches a consumer for `activity` (a consumer must not post on a ticket I don't own). See the dispatcher routing table.
 
 ### 4. Scan my merged PRs for missing Jira merge comments
 
@@ -129,6 +152,7 @@ Re-derive whether the underlying condition still holds:
 
 - `triage` → ticket is no longer `To Do`, or I've added at least one comment, or it's been reassigned.
 - `respond` → I've posted a comment after the one that triggered it.
+- `activity` → the issue no longer shows new activity in the involvement scan (it went quiet beyond the `-7d` window), or the user / a consumer already closed it. Awareness tasks are notifications: they self-dismiss when stale, and the user clears them sooner by acting. Don't keep bumping `refreshed` on an `activity` task whose triggering event is long past.
 - `merge` → the linked PR merged, or the ticket left `Ready to Merge`.
 - `transition` → ticket is now in a terminal status.
 - `review` / `re-review` → covered by current head (or PR closed).

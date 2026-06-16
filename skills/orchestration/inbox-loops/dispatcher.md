@@ -35,6 +35,7 @@ Defaults are conservative. When in doubt, escalate, don't auto.
 | `merge-comment:#NNNNN→LE-NNNN`    | auto      | Cross-system note posted as the user. Zero human stake.                                            |
 | `transition:LE-NNNN`              | auto, with caveat | Auto for transitions to non-terminal statuses. Escalate transitions to `Done` on tickets labeled `release-*` or priority `Critical`. |
 | `respond:LE-NNNN`                 | **both**  | Consumer drafts the reply; push so the user can review and post.                        |
+| `activity:LE-NNNN`                | escalate **only if `priority` is `high`/`critical`**, else **board-only** | Awareness of activity on an issue the user is involved in. **Never auto-dispatch** — a consumer must not post on a ticket the user doesn't own. The jira loop marks the high-signal slice (epic child → Ready to Merge, a ticket the user created → terminal) with `priority: high`; push those. Everything else just sits on the board as `new` until the user looks (or points a consumer at it by hand). |
 | `address:#NNNNN`                  | **both**  | Consumer reads the comment + drafts a reply; push so the user decides.                  |
 | `ci-fix:#NNNNN`                   | escalate  | The user's own PR has failing CI. They probably want to look first.                     |
 | `verify-fix:#NNNNN`               | escalate  | The consumer would post an APPROVED review on the user's behalf if it confirms. That's a strong action — push, no auto. |
@@ -83,13 +84,15 @@ d. Do not read the body of any vuln task file. Frontmatter is enough for routing
 
 ### 2. Categorize each open task
 
-Bucket each into: `auto` / `escalate` / `both` / `skip-already-claimed`.
+Bucket each into: `auto` / `escalate` / `both` / `board-only` / `skip-already-claimed`.
 
 - If `status` is `claimed`, `progress`, or `blocked` → `skip-already-claimed`. Do nothing this cycle for that task (the stuck-claim sweep in step 6 covers orphans separately).
 - Otherwise (`status == "new"`):
   1. Apply per-task `auto:` override first (`ok` → auto, `hold` → escalate, `done` → skip silently).
   2. Then apply `loops.dispatcher.routing_overrides` from config.
   3. Then apply the default routing table above.
+
+`board-only` means leave the task as `new` and do nothing this cycle — no consumer, no push. It stays on the kanban for the user to act on directly. `activity` tasks at normal priority land here; re-evaluate each cycle, so if one later picks up `priority: high` (e.g. its child hit Ready to Merge) it moves to `escalate` and gets pushed then.
 
 ### 3. Push notifications
 

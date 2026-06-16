@@ -1,6 +1,6 @@
 # Inbox loops protocol
 
-**Protocol version: 1.4.1.** This is the single source of truth for the docs' version. Each loop's reconcile step reads this line and echoes it in the cycle report (`protocol v1.4.1`), so you can tell from a report which version of the docs a running loop is actually on — not just which version is on disk. Bump this line (and the materialized copy under `<inbox-dir>/loops/`) whenever these docs change materially; keep it in step with the plugin `version` in `.claude-plugin/plugin.json`.
+**Protocol version: 1.5.0.** This is the single source of truth for the docs' version. Each loop's reconcile step reads this line and echoes it in the cycle report (`protocol v1.5.0`), so you can tell from a report which version of the docs a running loop is actually on — not just which version is on disk. Bump this line (and the materialized copy under `<inbox-dir>/loops/`) whenever these docs change materially; keep it in step with the plugin `version` in `.claude-plugin/plugin.json`.
 
 This file is the shared contract every inbox-loops agent reads — loops, dispatcher, and consumers all follow it. Background, philosophy, and the "why" live in [CONTEXT.md](./CONTEXT.md); this file only spells out the storage model, IDs, and rules. Per-user settings (inbox-dir path, credentials, cadence overrides, archive window) live in `<inbox-dir>/config.yaml`.
 
@@ -37,7 +37,8 @@ The ID identifies the task across emissions. Same `kind:key` means the same task
 | `merge-comment:#NNNNN→LE-NNNN`    | PR merged, post merge note on linked Jira ticket         | PR or Jira loop |
 | `transition:LE-NNNN`              | move Jira status to match reality (PR merged etc.)       | Jira loop only  |
 | `triage:LE-NNNN`                  | new ticket assigned, look at it                          | Jira loop only  |
-| `respond:LE-NNNN`                 | someone mentioned me in a ticket comment, reply          | Jira loop only  |
+| `respond:LE-NNNN`                 | new comment by someone else on a ticket that's mine (assignee/reporter) or @-mentions me, reply | Jira loop only  |
+| `activity:LE-NNNN`                | activity on an issue I'm involved in but not mine to answer (epic child created/changed, ticket I created reassigned/moved, comment on a ticket I only watch) — awareness | Jira loop only  |
 | `merge:LE-NNNN`                   | ticket is "Ready to Merge", merge its PR                 | Jira loop only  |
 | `advisory:ADV-NN`                 | published security advisory needing triage               | PR loop only    |
 | `vuln:VULN-NN`                    | vulnerability candidate found by code review (sensitive) | Vuln loop only  |
@@ -72,6 +73,7 @@ Worked examples:
 | `transition:LE-1416`                 | `transition-LE-1416.md`                   |
 | `triage:LE-1416`                     | `triage-LE-1416.md`                       |
 | `respond:LE-1416`                    | `respond-LE-1416.md`                      |
+| `activity:LE-1503`                   | `activity-LE-1503.md`                     |
 | `merge:LE-1416`                      | `merge-LE-1416.md`                        |
 | `advisory:ADV-07`                    | `advisory-ADV-07.md`                      |
 | `vuln:VULN-01`                       | `vuln-VULN-01.md`                         |
