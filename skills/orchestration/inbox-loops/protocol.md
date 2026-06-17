@@ -1,6 +1,6 @@
 # Inbox loops protocol
 
-**Protocol version: 1.5.1.** This is the single source of truth for the docs' version. Each loop's reconcile step reads this line and echoes it in the cycle report (`protocol v1.5.1`), so you can tell from a report which version of the docs a running loop is actually on — not just which version is on disk. Bump this line (and the materialized copy under `<inbox-dir>/loops/`) whenever these docs change materially; keep it in step with the plugin `version` in `.claude-plugin/plugin.json`.
+**Protocol version: 1.5.2.** This is the single source of truth for the docs' version. Each loop's reconcile step reads this line and echoes it in the cycle report (`protocol v1.5.2`), so you can tell from a report which version of the docs a running loop is actually on — not just which version is on disk. Bump this line (and the materialized copy under `<inbox-dir>/loops/`) whenever these docs change materially; keep it in step with the plugin `version` in `.claude-plugin/plugin.json`.
 
 This file is the shared contract every inbox-loops agent reads — loops, dispatcher, and consumers all follow it. Background, philosophy, and the "why" live in [CONTEXT.md](./CONTEXT.md); this file only spells out the storage model, IDs, and rules. Per-user settings (inbox-dir path, credentials, cadence overrides, archive window) live in `<inbox-dir>/config.yaml`.
 
