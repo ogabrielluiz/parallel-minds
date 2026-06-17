@@ -9,6 +9,7 @@ filters:
 formulas:
   display_status: if(status == "new", "1 To Do", if(status == "claimed", "1 To Do", if(status == "progress", "2 In Progress", if(status == "blocked", "3 Blocked", if(status == "done", "4 Done", "Unknown")))))
   age_days: (now() - file.ctime).days.round(0)
+  label: '[if(priority == "critical", "🔴", if(priority == "high", "🟠", if(priority == "medium", "🟡", ""))), if(kind == "review", "🔍", if(kind == "re-review", "🔁", if(kind == "address", "✍️", if(kind == "ci-fix", "🔧", if(kind == "verify-fix", "☑️", if(kind == "merge-comment", "🔗", if(kind == "transition", "➡️", if(kind == "triage", "🩺", if(kind == "respond", "💬", if(kind == "merge", "🔀", if(kind == "advisory", "🛡️", if(kind == "vuln", "🚨", if(kind == "mention", "📣", if(kind == "activity", "📡", "▫️")))))))))))))), kind].join(" ").trim()'
 properties:
   status:
     displayName: Status
@@ -50,6 +51,8 @@ properties:
     displayName: Age (days)
   formula.display_status:
     displayName: Column
+  formula.label:
+    displayName: Task
 views:
   - type: cards
     name: Board
@@ -60,10 +63,9 @@ views:
       property: formula.display_status
       direction: ASC
     order:
+      - formula.label
       - title
-      - kind
       - key
-      - priority
       - due
       - block_reason
   - type: cards
@@ -75,10 +77,10 @@ views:
       property: kind
       direction: ASC
     order:
+      - formula.label
       - title
       - key
       - status
-      - priority
       - due
   - type: table
     name: All open
