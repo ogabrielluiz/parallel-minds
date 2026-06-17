@@ -136,13 +136,21 @@ For every candidate task ID you computed:
 
 | Case | Behavior |
 |------|----------|
-| Not in open-set, file does not exist in `tasks/` | Create `tasks/<filename>.md` with `status: new`, `via: jira-loop`, `inbox: tickets`, today's date in `created`, `due`, `refreshed`, plus `kind`, `key`, `linked`, `title`. |
+| Not in open-set, file does not exist in `tasks/` | Create `tasks/<filename>.md` with `status: new`, `via: jira-loop`, `inbox: tickets`, today's date in `created`, `due`, `refreshed`, plus `kind`, `key`, `linked`, `title`, and `url` (see below). |
 | In open-set with `via: jira-loop` and `status != done` | Edit the file: bump `refreshed` to today. Leave `status`, `created`, `due`, body alone. |
 | In open-set with `via: pr-loop` | Leave the file alone. The PR loop owns it. |
 | In open-set with `status: done` | Leave the file alone. The condition will re-emit on the next cycle if it actually re-fires (new filename collision is fine; section 6 handles it). |
 | File exists in `tasks/archive/` only | Treat as absent. Write a fresh `tasks/<filename>.md`. |
 
 Watch for: never load the body during dedup. Frontmatter only.
+
+**Building `url` (the "where to act" link).** Every task you emit carries a bare `url:` so the user (or a consumer) can click straight to the spot, instead of reconstructing it from `key`/`linked`. Read `loops.jira.base_url` from config (e.g. `https://your-org.atlassian.net`).
+
+- Default for any ticket-keyed task (`triage`, `transition`, `merge`, `activity`, `respond`): `url: <base_url>/browse/<KEY>`.
+- For **comment-triggered** kinds (`respond`, and any `activity` raised by a comment) you already hold the triggering comment object from step 3 — append its id: `url: <base_url>/browse/<KEY>?focusedCommentId=<comment.id>`. This jumps the user to the exact comment to reply to.
+- For PR-keyed tasks you emit (`review`, `re-review`, `merge-comment`): `url: https://github.com/<loops.pr.repo>/pull/<N>` (strip the `#` from the key).
+
+If `loops.jira.base_url` is unset, fall back to leaving `url` off rather than guessing a host.
 
 ### 6. Mark resolved tasks
 

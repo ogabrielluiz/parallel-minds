@@ -10,6 +10,8 @@ loops:
     enabled: true
     cadence: "43 */3 * * *"
     project_key: "LE"
+    # Base URL of the Jira instance, used to build clickable `url` links on tasks.
+    base_url: "https://your-org.atlassian.net"
     # Epics you own. Children of these are watched for new activity (created,
     # status changes) and surfaced as activity: tasks. Leave empty to disable.
     owned_epics: []

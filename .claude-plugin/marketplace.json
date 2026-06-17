@@ -9,7 +9,7 @@
     {
       "name": "parallel-minds",
       "description": "A collection of Claude Code skills that leverage parallel agent swarms for creative exploration, ideation, problem-solving, and multi-session orchestration",
-      "version": "1.5.2",
+      "version": "1.6.0",
       "source": "./",
       "author": {
         "name": "ogabrielluiz",

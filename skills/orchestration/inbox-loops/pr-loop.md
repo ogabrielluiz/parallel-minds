@@ -134,12 +134,17 @@ status: new
 via: pr-loop
 linked: <LE-NNNN | #NNNNN | none>
 title: '<one-line, self-contained>'
+url: '<bare link to act on — see below>'
 created: <today>
 due: <today + cadence-appropriate window>
 refreshed: <today>
 inbox: prs
 ---
 ```
+
+`url` is the "where to act" link, a bare URL so Obsidian renders it clickable:
+- PR-keyed kinds (`review`, `re-review`, `address`, `ci-fix`, `verify-fix`, `merge-comment`): `https://github.com/<loops.pr.repo>/pull/<N>` (strip the `#` from the key).
+- `advisory:ADV-NN`: the advisory's GitHub URL from the notification if you have it, else leave `url` off.
 
 For `advisory:ADV-NN`, also set `priority: critical` (or `high`, per your judgment from the advisory severity).
 

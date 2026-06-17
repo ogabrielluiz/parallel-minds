@@ -1,6 +1,6 @@
 # Inbox loops protocol
 
-**Protocol version: 1.5.2.** This is the single source of truth for the docs' version. Each loop's reconcile step reads this line and echoes it in the cycle report (`protocol v1.5.2`), so you can tell from a report which version of the docs a running loop is actually on — not just which version is on disk. Bump this line (and the materialized copy under `<inbox-dir>/loops/`) whenever these docs change materially; keep it in step with the plugin `version` in `.claude-plugin/plugin.json`.
+**Protocol version: 1.6.0.** This is the single source of truth for the docs' version. Each loop's reconcile step reads this line and echoes it in the cycle report (`protocol v1.6.0`), so you can tell from a report which version of the docs a running loop is actually on — not just which version is on disk. Bump this line (and the materialized copy under `<inbox-dir>/loops/`) whenever these docs change materially; keep it in step with the plugin `version` in `.claude-plugin/plugin.json`.
 
 This file is the shared contract every inbox-loops agent reads — loops, dispatcher, and consumers all follow it. Background, philosophy, and the "why" live in [CONTEXT.md](./CONTEXT.md); this file only spells out the storage model, IDs, and rules. Per-user settings (inbox-dir path, credentials, cadence overrides, archive window) live in `<inbox-dir>/config.yaml`.
 
@@ -94,6 +94,7 @@ Every task file is a markdown document with a YAML frontmatter block. The body i
 | `status`       | string  | required                          | `new` / `claimed` / `progress` / `blocked` / `done`           | see state machine                    |
 | `via`          | string  | required                          | `pr-loop` / `jira-loop` / `vuln-loop`                         | emitting loop                        |
 | `linked`       | string  | required                          | cross-system reference (`LE-1416`, `#13294`) or `none`        | emitting loop                        |
+| `url`          | string  | optional (loops should set it)    | canonical place to act on the task: a Jira browse URL (with `?focusedCommentId=<id>` for comment-triggered kinds) or the PR URL. Bare URL so Obsidian renders it clickable. | emitting loop                        |
 | `title`        | string  | required                          | one-line, self-contained                                      | emitting loop                        |
 | `created`      | date    | required                          | `YYYY-MM-DD`, first emission date, never changes              | emitting loop                        |
 | `due`          | date    | required                          | `YYYY-MM-DD`, soft due date                                   | emitting loop (may bump on refresh)  |
