@@ -94,6 +94,43 @@ Structured findings report with severity tiers:
 
 Validated test scripts persist to `scrutiny/` for regression coverage.
 
+### plan-scrutiny
+
+Dispatches a panel of independent cold readers at a written implementation plan and measures where their interpretations diverge. Divergence locates the ambiguities that get executed inconsistently when the plan is fanned out across parallel agents.
+
+Invoke with `/parallel-minds:plan-scrutiny` or triggered automatically before executing a plan with parallel agents or a fresh no-context session.
+
+It does not write plans. Point it at one that already exists.
+
+#### Modes
+
+| Mode | Readers | When to Use |
+|------|---------|-------------|
+| `fast` | 3 | Default — plans under ten tasks |
+| `full` | 5 | Long plans, or a plan that already failed a run |
+| `auto-escalate` | 3 → 5 | Start at 3, add 2 when more than a third of tasks split |
+
+#### How It Works
+
+Readers get the plan text and nothing else — no conversation history, no design doc, no repository access. Each one commits to what it would actually do for every task, names exact file paths, and declares every detail it had to invent. Prompts are identical across readers, so any disagreement comes from the plan rather than from the instructions.
+
+A mechanical **STE audit** runs first, checking plan prose against a nine-rule subset of [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/). It produces candidate violations, not findings — a rule violation only counts once the panel actually diverges there.
+
+#### Evidence Standard
+
+Ambiguity is proven by **divergence**, not asserted by opinion. "This step is unclear" is a critique. "Reader A would edit the registry, reader B would create a new module" is a measurement, and the quoted pair is the artifact.
+
+#### Output
+
+Verdict (`REWRITE` / `PATCH` / `READY`), then a per-task table:
+
+- **CONVERGENT** — all readers named the same files, action, and done-condition
+- **SPLIT** — readers disagreed, with the conflicting interpretations quoted verbatim
+- **HEDGED** — readers committed but invented details the plan never stated
+- **Coverage Map** — what the probe could not check
+
+Splits are attributed to the STE rule that caused them, or labelled `underspecified` when the plan is missing a fact rather than breaking a language rule.
+
 ### inbox-loops
 
 > **Experimental.** Relies on undocumented Claude Code behavior (`claude --bg` background sessions and `CronCreate` scheduling). Crons are currently session-only, so loops do not survive a restart without re-running setup, and interfaces may shift between Claude Code versions.

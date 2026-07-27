@@ -8,7 +8,7 @@ Glossary of terms used across this repo's skills. Use these terms consistently i
 
 **Recipe** — A named configuration in `creative-consensus` that fixes agent count, topology (flat vs. multi-round), and model mix. The recipe matrix lives in [skills/design/creative-consensus/recipes.md](skills/design/creative-consensus/recipes.md).
 
-**Mode** — A named configuration in `implementation-scrutiny` controlling how many verification agents activate. Values: `fast` (3 core), `full` (3 core + 3–5 domain-specific), `auto-escalate` (start fast, escalate on conflict or gap).
+**Mode** — A named configuration controlling how many agents activate. In `implementation-scrutiny`: `fast` (3 core), `full` (3 core + 3–5 domain-specific), `auto-escalate` (start fast, escalate on conflict or gap). In `plan-scrutiny`: `fast` (3 readers), `full` (5 readers), `auto-escalate` (start at 3, add 2 when more than a third of tasks split).
 
 **Angle** — A perspective or role assigned to a single agent in a creative-consensus panel (e.g., minimalist, attacker, regret agent). The full per-domain catalog is in [skills/design/creative-consensus/angle-libraries.md](skills/design/creative-consensus/angle-libraries.md).
 
@@ -20,6 +20,14 @@ Glossary of terms used across this repo's skills. Use these terms consistently i
 
 **Validatable artifact** — An executable script or fetchable URL that backs a verification finding. Prose reasoning alone is not evidence.
 
+**Cold read** — A `plan-scrutiny` reader's report of what it would actually do for every task in a plan, produced from the plan text alone with no conversation history, no design doc, and no repository access. Readers commit to a reading rather than asking for clarification, because a swarm executor cannot ask. Prompt template in [skills/engineering/plan-scrutiny/cold-read-protocol.md](skills/engineering/plan-scrutiny/cold-read-protocol.md).
+
+**Divergence** — Two cold readers describing incompatible work for the same task: different files, different actions, or different completion conditions. Divergence is the evidence that a task is ambiguous; a reviewer's opinion that a task "reads unclear" is not. Classified per task as `CONVERGENT`, `SPLIT`, or `HEDGED`.
+
+**Invention** — A detail a cold reader supplied that the plan never stated (a file path, a test location, an ordering). Readers must declare inventions explicitly. Readers inventing *different* values for the same task is a `SPLIT` even when their stated actions match.
+
+**STE audit** — The mechanical pass in `plan-scrutiny` that checks plan prose against a nine-rule subset of ASD-STE100 Simplified Technical English. It produces candidate violations, never findings — a violation only counts once the panel diverges there. Rules in [skills/engineering/plan-scrutiny/ste-rules.md](skills/engineering/plan-scrutiny/ste-rules.md).
+
 **Validation gate** — The calling agent's job of executing every script and fetching every URL produced by verification agents before accepting their findings. Procedure in [skills/engineering/implementation-scrutiny/validation-gate.md](skills/engineering/implementation-scrutiny/validation-gate.md).
 
 **Invariant** — A concrete, falsifiable statement about what should be true after the code under scrutiny runs (e.g., "cart.items.length equals successful adds minus successful removes"). Comes from spec or intent, not from what the code currently does.
@@ -29,6 +37,8 @@ Glossary of terms used across this repo's skills. Use these terms consistently i
 **Tier** (creative-consensus output) — One of `conservative` (proven, low risk), `moderate` (novel but grounded), `ambitious` (high risk, high reward). The skill presents three tiers, never one blended pick.
 
 **Verdict** (implementation-scrutiny output) — One of `STOP`, `PROCEED WITH CAUTION`, `CLEAN` — communicates the top-level finding to the user, followed by the detailed coverage map.
+
+**Verdict** (plan-scrutiny output) — One of `REWRITE` (a third or more of tasks split), `PATCH` (isolated splits), `READY` (no splits) — opens the report, followed by the per-task divergence table and the coverage map.
 
 **Loop** — a producer (`pr` / `jira` / `vuln`) or the dispatcher, each running as its own cron-armed background session.
 
