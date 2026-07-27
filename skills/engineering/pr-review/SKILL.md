@@ -66,7 +66,7 @@ Then filter: drop everything below `--threshold` (default 75), drop everything `
 
 **Local mode output**: Present findings in the conversation, grouped by axis (Bugs & Behavior first, then Fit, then Spec if any). Within each group, sort by file path then line. Per finding: `` `path/to/file.ext:42` — short claim `` on the first line, validator's one-sentence proof on the indented next line. No verdict, no confidence scores, no axis tags inline. Watch for: padding the output with low-conviction findings the filter already dropped — don't re-add them.
 
-Write the body and every comment (or every local-mode finding) per the [`pr-comment-style`](../pr-comment-style/SKILL.md) skill — voice rules live there.
+Write the body and every comment (or every local-mode finding) per [voice.md](voice.md) — voice rules live there.
 
 If `--fix` was set (both modes), apply each confirmed finding's suggested fix to the working tree, stage it, and report the diff to the caller without committing.
 
@@ -78,4 +78,6 @@ There is no file-size or diff-size cap. A big diff is fine if it is one coherent
 
 ## Voice
 
-Write the review body and every comment (or local-mode finding) per the [`pr-comment-style`](../pr-comment-style/SKILL.md) skill. Load it and follow it. The voice rules live there, not in this skill.
+Write the review body and every comment (or local-mode finding) per [voice.md](voice.md). Load it and follow it. The voice rules live there, not in this skill.
+
+If you have your own PR voice skill installed (`pr-comment-style` or similar), it overrides [voice.md](voice.md) entirely. The sidecar is the default so the plugin works standalone.

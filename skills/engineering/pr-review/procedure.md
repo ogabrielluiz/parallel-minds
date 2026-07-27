@@ -84,7 +84,7 @@ Drop everything below `--threshold` (default 75). Drop everything `rejected`. Ke
 - Create a PENDING review: `POST /repos/{owner}/{repo}/pulls/{N}/reviews` with `body` and `comments`, and **NO `event` field**. Omitting `event` is what makes it pending. On a 422 for a bad line, drop that comment and retry. Never submit unless `--comment` was set.
 - Do not repeat a finding in both the body and an inline comment. If it is inline, the body just says notes are inline.
 - No verdict, no confidence scores, no axis tags in the posted text. Findings only.
-- Write the body and every comment per the `pr-comment-style` skill.
+- Write the body and every comment per [voice.md](voice.md), or per your own PR voice skill if one is installed.
 
 ### 3.5 Local mode — present findings in the conversation
 
@@ -100,7 +100,7 @@ Drop everything below `--threshold` (default 75). Drop everything `rejected`. Ke
   ```
 - No verdict, no confidence scores, no axis tags inline.
 - If a finding spans multiple lines, use the start line in the path and mention the range in the claim ("lines 42-48").
-- Write each claim and proof per the `pr-comment-style` skill — same voice as PR mode, same brevity.
+- Write each claim and proof per [voice.md](voice.md) — same voice as PR mode, same brevity.
 
 ### 3.6 If `--fix` was set (both modes)
 
